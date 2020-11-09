@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.sql.tpch.model.domain;
+package com.hazelcast.sql_slow.tpch.model.domain;
 
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -23,47 +23,55 @@ import com.hazelcast.nio.serialization.DataSerializable;
 import java.io.IOException;
 
 /**
- * TPC-H model: region.
+ * TPC-H model: nation.
  */
 @SuppressWarnings("checkstyle:ParameterName")
-public class Region implements DataSerializable {
-    public long r_regionkey;
-    public String r_name;
-    public String r_comment;
+public class Nation implements DataSerializable {
+    public long n_nationkey;
+    public String n_name;
+    public long n_regionkey;
+    public String n_comment;
 
-    public Region() {
+    public Nation() {
         // No-op.
     }
 
-    public Region(long r_regionkey, String r_name, String r_comment) {
-        this.r_regionkey = r_regionkey;
-        this.r_name = r_name;
-        this.r_comment = r_comment;
+    public Nation(long n_nationkey, String n_name, long n_regionkey, String n_comment) {
+        this.n_nationkey = n_nationkey;
+        this.n_name = n_name;
+        this.n_regionkey = n_regionkey;
+        this.n_comment = n_comment;
     }
 
-    public long getR_regionkey() {
-        return r_regionkey;
+    public long getN_nationkey() {
+        return n_nationkey;
     }
 
-    public String getR_name() {
-        return r_name;
+    public String getN_name() {
+        return n_name;
     }
 
-    public String getR_comment() {
-        return r_comment;
+    public long getN_regionkey() {
+        return n_regionkey;
+    }
+
+    public String getN_comment() {
+        return n_comment;
     }
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeLong(r_regionkey);
-        out.writeUTF(r_name);
-        out.writeUTF(r_comment);
+        out.writeLong(n_nationkey);
+        out.writeUTF(n_name);
+        out.writeLong(n_regionkey);
+        out.writeUTF(n_comment);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        r_regionkey = in.readLong();
-        r_name = in.readUTF();
-        r_comment = in.readUTF();
+        n_nationkey = in.readLong();
+        n_name = in.readUTF();
+        n_regionkey = in.readLong();
+        n_comment = in.readUTF();
     }
 }

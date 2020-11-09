@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.sql.tpch;
+package com.hazelcast.sql_slow.tpch;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.MapConfig;
@@ -26,13 +26,19 @@ import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.impl.plan.Plan;
 import com.hazelcast.sql.impl.SqlResultImpl;
 import com.hazelcast.sql.support.CalciteSqlTestSupport;
-import com.hazelcast.sql.tpch.model.ModelConfig;
-import com.hazelcast.sql.tpch.model.ModelLoader;
+import com.hazelcast.sql_slow.tpch.model.ModelConfig;
+import com.hazelcast.sql_slow.tpch.model.ModelLoader;
+import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.TestHazelcastInstanceFactory;
+import com.hazelcast.test.annotation.ParallelJVMTest;
+import com.hazelcast.test.annotation.QuickTest;
+import com.hazelcast.test.annotation.SlowTest;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
 
 import java.math.BigDecimal;
 import java.nio.file.Files;
@@ -50,6 +56,8 @@ import static junit.framework.TestCase.fail;
  * In order to run the test you need to generate 1Gb of TPC-H (scale factor 1) and put it into the "tpch" directory of the
  * hazelcast-sql project. The directory could be overridden with a system property {@link #DATA_DIR_PROPERTY}.
  */
+@RunWith(HazelcastSerialClassRunner.class)
+@Category({SlowTest.class, ParallelJVMTest.class})
 @SuppressWarnings({"checkstyle:OperatorWrap", "unused"})
 public class TpcHTest extends CalciteSqlTestSupport {
     private static final String DATA_DIR_PROPERTY = "hazelcast.sql.test.tpch_dir";

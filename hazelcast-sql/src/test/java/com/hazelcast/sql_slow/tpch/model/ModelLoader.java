@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.sql.tpch.model;
+package com.hazelcast.sql_slow.tpch.model;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.internal.util.BiTuple;
@@ -22,14 +22,14 @@ import com.hazelcast.map.IMap;
 import com.hazelcast.partition.Partition;
 import com.hazelcast.partition.PartitionService;
 import com.hazelcast.replicatedmap.ReplicatedMap;
-import com.hazelcast.sql.tpch.model.domain.Customer;
-import com.hazelcast.sql.tpch.model.domain.LineItem;
-import com.hazelcast.sql.tpch.model.domain.Nation;
-import com.hazelcast.sql.tpch.model.domain.Order;
-import com.hazelcast.sql.tpch.model.domain.Part;
-import com.hazelcast.sql.tpch.model.domain.PartSupp;
-import com.hazelcast.sql.tpch.model.domain.Region;
-import com.hazelcast.sql.tpch.model.domain.Supplier;
+import com.hazelcast.sql_slow.tpch.model.domain.Customer;
+import com.hazelcast.sql_slow.tpch.model.domain.LineItem;
+import com.hazelcast.sql_slow.tpch.model.domain.Nation;
+import com.hazelcast.sql_slow.tpch.model.domain.Order;
+import com.hazelcast.sql_slow.tpch.model.domain.Part;
+import com.hazelcast.sql_slow.tpch.model.domain.PartSupp;
+import com.hazelcast.sql_slow.tpch.model.domain.Region;
+import com.hazelcast.sql_slow.tpch.model.domain.Supplier;
 
 import java.io.IOException;
 import java.math.BigDecimal;

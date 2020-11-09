@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.sql.tpch.model;
+package com.hazelcast.sql_slow.tpch.model;
 
 /**
  * Configuration of the model.
