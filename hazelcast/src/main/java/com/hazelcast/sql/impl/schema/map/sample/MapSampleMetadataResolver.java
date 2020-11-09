@@ -19,7 +19,6 @@ package com.hazelcast.sql.impl.schema.map.sample;
 import com.hazelcast.core.HazelcastJsonValue;
 import com.hazelcast.internal.json.Json;
 import com.hazelcast.internal.json.JsonObject;
-import com.hazelcast.internal.json.JsonObject.Member;
 import com.hazelcast.internal.json.JsonValue;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.InternalSerializationService;
@@ -35,15 +34,12 @@ import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import com.hazelcast.sql.impl.type.QueryDataTypeUtils;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.Map.Entry;
 
 /**
  * Helper class that resolves a map-backed table from a key/value sample.
@@ -165,5 +161,68 @@ public final class MapSampleMetadataResolver {
             jetMapMetadataResolver.resolveClass(clazz, isKey),
             fields
         );
+    }
+
+    private static MapSampleMetadata resolveJson(
+        HazelcastJsonValue json,
+        boolean isKey,
+        JetMapMetadataResolver jetMapMetadataResolver
+    ) {
+        Map<String, TableField> fields = new TreeMap<>();
+        Set<String> pathsRequiringConversion = new HashSet<>();
+
+        // Add regular fields.
+        JsonObject object = Json.parse(json.toString()).asObject();
+        for (JsonObject.Member member : object) {
+            QueryPath path = new QueryPath(member.getName(), isKey);
+            QueryDataType type = resolveJsonType(member.getValue());
+            String name = member.getName();
+            boolean requiresConversion = doesRequireConversion(type);
+
+            MapTableField field = new MapTableField(name, type, false, path, requiresConversion);
+
+            if (fields.putIfAbsent(field.getName(), field) == null && field.isRequiringConversion()) {
+                pathsRequiringConversion.add(field.getPath().getPath());
+            }
+        }
+
+        // Add top-level object.
+        fields = new LinkedHashMap<>(fields);
+
+        String topName = isKey ? QueryPath.KEY : QueryPath.VALUE;
+        QueryPath topPath = isKey ? QueryPath.KEY_PATH : QueryPath.VALUE_PATH;
+
+        fields.remove(topName);
+        fields.put(topName, new MapTableField(topName, QueryDataType.OBJECT, !fields.isEmpty(), topPath));
+
+        return new MapSampleMetadata(
+            new GenericQueryTargetDescriptor(pathsRequiringConversion),
+            jetMapMetadataResolver.resolveJson(isKey),
+            new LinkedHashMap<>(fields)
+        );
+    }
+
+    @SuppressWarnings("checkstyle:ReturnCount")
+    private static QueryDataType resolveJsonType(JsonValue value) {
+        if (value.isBoolean()) {
+            return QueryDataType.BOOLEAN;
+        } else if (value.isNumber()) {
+            return QueryDataType.DOUBLE;
+        } else if (value.isString()) {
+            return QueryDataType.VARCHAR;
+        } else {
+            return QueryDataType.OBJECT;
+        }
+    }
+
+    private static boolean doesRequireConversion(QueryDataType type) {
+        switch (type.getTypeFamily()) {
+            case BOOLEAN:
+                // case BIGINT: 1.0 is being stored as 1 leading effectively to reading value of type Long
+            case VARCHAR:
+                return false;
+            default:
+                return true;
+        }
     }
 }

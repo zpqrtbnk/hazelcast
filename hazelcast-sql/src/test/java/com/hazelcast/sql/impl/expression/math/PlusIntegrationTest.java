@@ -286,6 +286,11 @@ public class PlusIntegrationTest extends ExpressionIntegrationTestBase {
     }
 
     @Test
+    public void testLiteral() {
+        assertRow("decimal1 + 1", EXPR0, DECIMAL, BigDecimal.valueOf(2));
+    }
+
+    @Test
     public void testDecimal() {
         assertParsingError("decimal1 + booleanTrue", "Cannot apply '+' to arguments of type '<DECIMAL(38, 38)> + <BOOLEAN>'");
 
