@@ -49,6 +49,7 @@ import java.util.Map;
 import static com.hazelcast.instance.impl.HazelcastInstanceFactory.newHazelcastInstance;
 import static com.hazelcast.sql.impl.QueryUtils.CATALOG;
 import static com.hazelcast.sql.impl.QueryUtils.SCHEMA_NAME_PARTITIONED;
+import static com.hazelcast.sql.impl.QueryUtils.SCHEMA_NAME_REPLICATED;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -143,11 +144,12 @@ public class JetSqlTest extends SqlTestSupport {
         public SqlPlan prepare(OptimizationTask task) {
             assertContains(task.getSearchPaths(), asList(CATALOG, JET_NAMESPACE));
             assertEquals(
-                    task.getSchema().getSchemas(),
                     ImmutableMap.of(
                             JET_NAMESPACE, ImmutableMap.of(JET_TABLE, TEST_TABLE),
-                            SCHEMA_NAME_PARTITIONED, ImmutableMap.of()
-                    )
+                            SCHEMA_NAME_PARTITIONED, ImmutableMap.of(),
+                            SCHEMA_NAME_REPLICATED, ImmutableMap.of()
+                    ),
+                    task.getSchema().getSchemas()
             );
 
             return mock(SqlPlan.class);
