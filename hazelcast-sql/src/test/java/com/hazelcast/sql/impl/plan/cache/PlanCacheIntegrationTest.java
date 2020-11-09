@@ -206,7 +206,7 @@ public class PlanCacheIntegrationTest extends PlanCacheTestSupport {
         // Error with invalidation
         setExecHook(member, exec -> {
             if (exec instanceof MapScanExec) {
-               exec = new FaultyExec(exec, QueryException.error("Failed").withInvalidate());
+               exec = new FaultyExec(exec, QueryException.error("Failed").markInvalidate());
             }
 
             return exec;

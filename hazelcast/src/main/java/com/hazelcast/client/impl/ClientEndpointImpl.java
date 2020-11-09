@@ -53,6 +53,7 @@ import static com.hazelcast.internal.metrics.MetricTarget.MANAGEMENT_CENTER;
 public final class ClientEndpointImpl implements ClientEndpoint {
     private static final String METRICS_TAG_CLIENT = "client";
     private static final String METRICS_TAG_TIMESTAMP = "timestamp";
+    private static final String METRICS_TAG_CLIENTNAME = "clientname";
 
     private final ClientEngine clientEngine;
     private final ILogger logger;
@@ -282,8 +283,12 @@ public final class ClientEndpointImpl implements ClientEndpoint {
     public void provideDynamicMetrics(MetricDescriptor descriptor, MetricsCollectionContext context) {
         ClientStatistics clientStatistics = statsRef.get();
         if (clientStatistics != null && clientStatistics.metricsBlob() != null) {
-            long timestamp = clientStatistics.timestamp();
             byte[] metricsBlob = clientStatistics.metricsBlob();
+            if (metricsBlob.length == 0) {
+                // zero length means that the client does not support the new format
+                return;
+            }
+            long timestamp = clientStatistics.timestamp();
             MetricConsumer consumer = new MetricConsumer() {
                 @Override
                 public void consumeLong(MetricDescriptor descriptor, long value) {
@@ -301,8 +306,9 @@ public final class ClientEndpointImpl implements ClientEndpoint {
                             // since we want to send the client-side metrics only to MC
                             .withExcludedTargets(MetricTarget.ALL_TARGETS)
                             .withIncludedTarget(MANAGEMENT_CENTER)
-                            // we add "client" and "timestamp" tags for MC
+                            // we add "client", "clientname" and "timestamp" tags for MC
                             .withTag(METRICS_TAG_CLIENT, getUuid().toString())
+                            .withTag(METRICS_TAG_CLIENTNAME, clientName)
                             .withTag(METRICS_TAG_TIMESTAMP, Long.toString(timestamp));
                 }
             };

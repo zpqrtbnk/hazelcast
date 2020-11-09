@@ -96,13 +96,16 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 
 import static com.hazelcast.internal.util.ConcurrencyUtil.CALLER_RUNS;
+import static com.hazelcast.internal.util.Preconditions.checkPositive;
 import static com.hazelcast.internal.util.SetUtil.immutablePartitionIdSet;
 import static com.hazelcast.map.impl.ListenerAdapters.createListenerAdapter;
+import static com.hazelcast.map.impl.MapKeyLoader.LOADED_KEY_LIMITER_PER_NODE;
+import static com.hazelcast.map.impl.MapKeyLoader.PROP_LOADED_KEY_LIMITER_PER_NODE;
 import static com.hazelcast.map.impl.MapListenerFlagOperator.setAndGetListenerFlags;
 import static com.hazelcast.map.impl.MapService.SERVICE_NAME;
 import static com.hazelcast.query.impl.predicates.QueryOptimizerFactory.newOptimizer;
@@ -145,11 +148,16 @@ class MapServiceContextImpl implements MapServiceContext {
     private final ConstructorFunction<String, MapContainer> mapConstructor;
     private final IndexProvider indexProvider = new DefaultIndexProvider();
     private final ContextMutexFactory contextMutexFactory = new ContextMutexFactory();
-    private final AtomicReference<PartitionIdSet> ownedPartitions = new AtomicReference<>();
     private final ConcurrentMap<String, MapContainer> mapContainers = new ConcurrentHashMap<>();
     private final ExecutorStats offloadedExecutorStats = new ExecutorStats();
+    /**
+     * @see {@link MapKeyLoader#DEFAULT_LOADED_KEY_LIMIT_PER_NODE}
+     */
+    private final Semaphore nodeWideLoadedKeyLimiter;
 
     private MapService mapService;
+
+    private volatile PartitionIdSet ownedPartitions;
 
     @SuppressWarnings("checkstyle:executablestatementcount")
     MapServiceContextImpl(NodeEngine nodeEngine) {
@@ -168,11 +176,14 @@ class MapServiceContextImpl implements MapServiceContext {
         this.resultProcessorRegistry = createResultProcessorRegistry(serializationService);
         this.partitionScanRunner = createPartitionScanRunner();
         this.queryEngine = createMapQueryEngine();
-        this.mapQueryRunner = createMapQueryRunner(nodeEngine, queryOptimizer, resultProcessorRegistry, partitionScanRunner);
+        this.mapQueryRunner = createMapQueryRunner(nodeEngine, queryOptimizer,
+                resultProcessorRegistry, partitionScanRunner);
         this.eventService = nodeEngine.getEventService();
         this.operationProviders = createOperationProviders();
         this.partitioningStrategyFactory = new PartitioningStrategyFactory(nodeEngine.getConfigClassLoader());
         this.nodeWideUsedCapacityCounter = new NodeWideUsedCapacityCounter(nodeEngine.getProperties());
+        this.nodeWideLoadedKeyLimiter = new Semaphore(checkPositive(PROP_LOADED_KEY_LIMITER_PER_NODE,
+                nodeEngine.getProperties().getInteger(LOADED_KEY_LIMITER_PER_NODE)));
         this.logger = nodeEngine.getLogger(getClass());
     }
 
@@ -473,39 +484,28 @@ class MapServiceContextImpl implements MapServiceContext {
     }
 
     @Override
-    public PartitionIdSet getOwnedPartitions() {
-        PartitionIdSet partitions = ownedPartitions.get();
-        if (partitions == null) {
-            do {
-                reloadOwnedPartitions();
-                partitions = ownedPartitions.get();
-            } while (partitions == null);
+    public PartitionIdSet getOrInitCachedMemberPartitions() {
+        PartitionIdSet ownedPartitionIdSet = ownedPartitions;
+        if (ownedPartitionIdSet != null) {
+            return ownedPartitionIdSet;
         }
-        return partitions;
-    }
 
-    /**
-     * {@inheritDoc}
-     * <p>
-     * The method will set the owned partition set in a CAS loop because
-     * this method can be called concurrently.
-     */
-    @Override
-    public void reloadOwnedPartitions() {
-        IPartitionService partitionService = nodeEngine.getPartitionService();
-        for (; ; ) {
-            PartitionIdSet expected = ownedPartitions.get();
-            Collection<Integer> partitions = partitionService.getMemberPartitions(nodeEngine.getThisAddress());
-            PartitionIdSet newSet = immutablePartitionIdSet(partitionService.getPartitionCount(), partitions);
-            if (ownedPartitions.compareAndSet(expected, newSet)) {
-                return;
+        synchronized (this) {
+            ownedPartitionIdSet = ownedPartitions;
+            if (ownedPartitionIdSet != null) {
+                return ownedPartitionIdSet;
             }
+            IPartitionService partitionService = nodeEngine.getPartitionService();
+            Collection<Integer> partitions = partitionService.getMemberPartitions(nodeEngine.getThisAddress());
+            ownedPartitionIdSet = immutablePartitionIdSet(partitionService.getPartitionCount(), partitions);
+            ownedPartitions = ownedPartitionIdSet;
         }
+        return ownedPartitionIdSet;
     }
 
     @Override
     public void nullifyOwnedPartitions() {
-        ownedPartitions.set(null);
+        ownedPartitions = null;
     }
 
     @Override
@@ -884,6 +884,11 @@ class MapServiceContextImpl implements MapServiceContext {
     @Override
     public ValueComparator getValueComparatorOf(InMemoryFormat inMemoryFormat) {
         return ValueComparatorUtil.getValueComparatorOf(inMemoryFormat);
+    }
+
+    @Override
+    public Semaphore getNodeWideLoadedKeyLimiter() {
+        return nodeWideLoadedKeyLimiter;
     }
 
     public NodeWideUsedCapacityCounter getNodeWideUsedCapacityCounter() {

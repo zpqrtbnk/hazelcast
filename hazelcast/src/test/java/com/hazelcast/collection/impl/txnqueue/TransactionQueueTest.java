@@ -36,6 +36,7 @@ import com.hazelcast.transaction.TransactionNotActiveException;
 import com.hazelcast.transaction.TransactionOptions;
 import com.hazelcast.transaction.TransactionalQueue;
 import com.hazelcast.transaction.TransactionalTask;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -336,6 +337,7 @@ public class TransactionQueueTest extends HazelcastTestSupport {
         testIssue859And863(instance1, instance2, inQueueName, outQueueName);
     }
 
+    @Ignore("https://github.com/hazelcast/hazelcast/issues/11647#issuecomment-686505783")
     @Test
     public void testIssue859And863_WhenQueuesAreOnSecondInstance() {
         Config config = getConfig();
@@ -362,6 +364,7 @@ public class TransactionQueueTest extends HazelcastTestSupport {
         testIssue859And863(instance1, instance2, inQueueName, outQueueName);
     }
 
+    @Ignore("https://github.com/hazelcast/hazelcast/issues/11647#issuecomment-686505783")
     @Test
     public void testIssue859And863_WhenInQueueOnSecondInstance_OutQueueOnFirstInstance() {
         Config config = getConfig();

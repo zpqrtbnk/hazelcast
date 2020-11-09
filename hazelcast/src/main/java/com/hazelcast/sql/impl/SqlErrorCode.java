@@ -32,8 +32,8 @@ public final class SqlErrorCode {
     /** Query was cancelled due to timeout. */
     public static final int TIMEOUT = 1004;
 
-    /** Partition distribution has changed. */
-    public static final int PARTITION_DISTRIBUTION_CHANGED = 1005;
+    /** A problem with partition distribution. */
+    public static final int PARTITION_DISTRIBUTION = 1005;
 
     /** An error caused by a concurrent destroy of a map. */
     public static final int MAP_DESTROYED = 1006;
@@ -44,8 +44,8 @@ public final class SqlErrorCode {
     /** Generic parsing error. */
     public static final int PARSING = 1008;
 
-    /** An error caused by a concurrent destroy of an index. */
-    public static final int MAP_INDEX_NOT_EXISTS = 1009;
+    /** An error caused by an attempt to query an index that is not valid. */
+    public static final int INDEX_INVALID = 1009;
 
     /** An error with data conversion or transformation. */
     public static final int DATA_EXCEPTION = 2000;

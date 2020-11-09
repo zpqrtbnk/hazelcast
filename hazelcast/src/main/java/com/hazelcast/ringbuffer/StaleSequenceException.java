@@ -24,8 +24,8 @@ import com.hazelcast.spi.impl.operationservice.WrappableException;
  * than the current head sequence and that the ringbuffer store is disabled. This means that the item isn't available in the
  * ringbuffer and it cannot be loaded from the store either, thus being completely unavailable.
  */
-public class StaleSequenceException extends RuntimeException
-        implements SilentException, WrappableException<StaleSequenceException> {
+public class StaleSequenceException extends RuntimeException implements SilentException,
+        WrappableException<StaleSequenceException> {
 
     private final long headSeq;
 
@@ -37,6 +37,11 @@ public class StaleSequenceException extends RuntimeException
      */
     public StaleSequenceException(String message, long headSeq) {
         super(message);
+        this.headSeq = headSeq;
+    }
+
+    public StaleSequenceException(String message, long headSeq, Throwable cause) {
+        super(message, cause);
         this.headSeq = headSeq;
     }
 
@@ -52,8 +57,6 @@ public class StaleSequenceException extends RuntimeException
 
     @Override
     public StaleSequenceException wrap() {
-        StaleSequenceException staleSequenceException = new StaleSequenceException(getMessage(), headSeq);
-        staleSequenceException.initCause(this);
-        return staleSequenceException;
+        return new StaleSequenceException(getMessage(), headSeq, this);
     }
 }

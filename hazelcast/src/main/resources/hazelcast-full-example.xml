@@ -23,7 +23,7 @@
   the directory where you start your Hazelcast member.
 
   To learn how to configure Hazelcast, please see the schema at
-  https://hazelcast.com/schema/config/hazelcast-config-4.1.xsd
+  https://hazelcast.com/schema/config/hazelcast-config-4.2.xsd
   or the Reference Manual at https://hazelcast.org/documentation/
 -->
 
@@ -31,7 +31,7 @@
 <hazelcast xmlns="http://www.hazelcast.com/schema/config"
            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
            xsi:schemaLocation="http://www.hazelcast.com/schema/config
-           http://www.hazelcast.com/schema/config/hazelcast-config-4.1.xsd">
+           http://www.hazelcast.com/schema/config/hazelcast-config-4.2.xsd">
 
     <!--
         You can use the <import> element to load different Hazelcast declarative configuration files you prepared.
@@ -553,8 +553,8 @@
             </properties>
         </ssl>
         * <socket-interceptor>:
-        Lets you add custom hooks to join and perform connection procedures (like identity checking using
-        Kerberos, etc.). This feature is available only in Hazelcast Enterprise. To be able to use it, you
+        Lets you add custom hooks to join and perform connection procedures (like a custom authentication negotiation
+        protocol, etc.). This feature is available only in Hazelcast Enterprise. To be able to use it, you
         should first implement the MemberSocketInterceptor (for members joining to a cluster) or
         SocketInterceptor (for clients connecting to a member) class. Its configuration contains the class you
         implemented and socket interceptor properties. By default, it is disabled. The following is an example:
@@ -563,8 +563,8 @@
                 com.hazelcast.examples.MySocketInterceptor
             </class-name>
             <properties>
-                <property name="kerberos-host">kerb-host-name</property>
-                <property name="kerberos-config-file">kerb.conf</property>
+                <property name="property1">value1</property>
+                <property name="property2">value2</property>
             </properties>
         </socket-interceptor>
         * <symmetric-encryption>:
@@ -656,15 +656,31 @@
             <aws enabled="false">
                 <access-key>my-access-key</access-key>
                 <secret-key>my-secret-key</secret-key>
-                <iam-role>dummy</iam-role>
                 <region>us-west-1</region>
                 <host-header>ec2.amazonaws.com</host-header>
-                <security-group-name>hazelcast-sg</security-group-name>
+                <connection-timeout-seconds>7</connection-timeout-seconds>
+                <read-timeout-seconds>7</read-timeout-seconds>
+                <connection-retries>4</connection-retries>
+                <hz-port>5701-5710</hz-port>
                 <tag-key>type</tag-key>
                 <tag-value>hz-nodes</tag-value>
+                <security-group-name>hazelcast-sg</security-group-name>
+                <iam-role>dummy</iam-role>
+                <use-public-ip>true</use-public-ip>
+                <!--
+                <cluster>my-cluster</cluster>
+                <family>test-family</family>
+                <service-name>test-service</service-name>
+                -->
             </aws>
             <gcp enabled="false">
-                <zones>us-east1-b,us-east1-c</zones>
+                <private-key-path>key-path</private-key-path>
+                <projects>project-1,project-2</projects>
+                <region>us-central1</region>
+                <zones>us-central1-b,us-central1-c</zones>
+                <label>key=value</label>
+                <hz-port>5701-5710</hz-port>
+                <use-public-ip>true</use-public-ip>
             </gcp>
             <azure enabled="false">
                 <instance-metadata-available>false</instance-metadata-available>
@@ -675,6 +691,8 @@
                 <resource-group>RESOURCE-GROUP-NAME</resource-group>
                 <scale-set>SCALE-SET-NAME</scale-set>
                 <tag>TAG-NAME=HZLCAST001</tag>
+                <hz-port>5701-5707</hz-port>
+                <use-public-ip>true</use-public-ip>
             </azure>
             <kubernetes enabled="false">
                 <namespace>MY-KUBERNETES-NAMESPACE</namespace>
@@ -2134,7 +2152,7 @@
         <!-- Simple configuration for single-socket machines with non-volatile memory -->
         <!-- <persistent-memory-directory>/mnt/optane</persistent-memory-directory> -->
         <!-- Advanced configuration for non-volatile memory -->
-        <persistent-memory>
+        <persistent-memory enabled="true" mode="MOUNTED">
             <directories>
                 <directory numa-node="0">/mnt/pmem0</directory>
                 <directory numa-node="1">/mnt/pmem1</directory>
@@ -2303,6 +2321,21 @@
                     </kerberos>
                 </identity>
             </realm>
+            <realm name="simpleKerberosRealm">
+                <authentication>
+                    <kerberos>
+                        <principal>hz/127.0.0.1@HAZELCAST.COM</principal>
+                        <keytab-file>/opt/localhost.keytab</keytab-file>
+                    </kerberos>
+                </authentication>
+                <identity>
+                    <kerberos>
+                        <realm>HAZELCAST.COM</realm>
+                        <principal>hz/127.0.0.1@HAZELCAST.COM</principal>
+                        <keytab-file>/opt/localhost.keytab</keytab-file>
+                    </kerberos>
+                </identity>
+            </realm>
             <realm name="krb5Acceptor">
                 <authentication>
                     <jaas>
@@ -2457,11 +2490,11 @@
                     <action>all</action>
                 </actions>
             </pn-counter-permission>
-            <sql-permission>
-                <endpoints>
-                    <endpoint>127.0.0.1</endpoint>
-                </endpoints>
-            </sql-permission>
+            <replicatedmap-permission name="*">
+                <actions>
+                    <action>all</action>
+                </actions>
+            </replicatedmap-permission>
         </client-permissions>
         <client-block-unmapped-actions>true</client-block-unmapped-actions>
         <security-interceptors>
@@ -2945,8 +2978,8 @@
                     </properties>
                 </ssl>
             * <socket-interceptor>:
-                Lets you add custom hooks to join and perform connection procedures (like identity checking using
-                Kerberos, etc.). This feature is available only in Hazelcast Enterprise. To be able to use it, you
+                Lets you add custom hooks to join and perform connection procedures (like a custom authentication negotiation
+                protocol, etc.). This feature is available only in Hazelcast Enterprise. To be able to use it, you
                 should first implement the MemberSocketInterceptor (for members joining to a cluster) or
                 SocketInterceptor (for clients connecting to a member) class. Its configuration contains the class you
                 implemented and socket interceptor properties. By default, it is disabled. The following is an example:
@@ -2955,8 +2988,8 @@
                         com.hazelcast.examples.MySocketInterceptor
                     </class-name>
                     <properties>
-                        <property name="kerberos-host">kerb-host-name</property>
-                        <property name="kerberos-config-file">kerb.conf</property>
+                        <property name="property1">value1</property>
+                        <property name="property2">value2</property>
                     </properties>
                 </socket-interceptor>
             * <symmetric-encryption>:
@@ -3052,19 +3085,31 @@
             <aws enabled="false">
                 <access-key>my-access-key</access-key>
                 <secret-key>my-secret-key</secret-key>
-                <iam-role>dummy</iam-role>
-                <!--optional, default is us-east-1 -->
                 <region>us-west-1</region>
-                <!--optional, default is ec2.amazonaws.com. If set, region shouldn't be set as it will override this property -->
                 <host-header>ec2.amazonaws.com</host-header>
-                <!-- optional, only instances belonging to this group will be discovered, default will try all running instances -->
-                <security-group-name>hazelcast-sg</security-group-name>
+                <connection-timeout-seconds>7</connection-timeout-seconds>
+                <read-timeout-seconds>7</read-timeout-seconds>
+                <connection-retries>4</connection-retries>
+                <hz-port>5701-5710</hz-port>
                 <tag-key>type</tag-key>
                 <tag-value>hz-nodes</tag-value>
+                <security-group-name>hazelcast-sg</security-group-name>
+                <iam-role>dummy</iam-role>
                 <use-public-ip>true</use-public-ip>
+                <!--
+                <cluster>my-cluster</cluster>
+                <family>test-family</family>
+                <service-name>test-service</service-name>
+                -->
             </aws>
             <gcp enabled="false">
-                <zones>us-east1-b,us-east1-c</zones>
+                <private-key-path>key-path</private-key-path>
+                <projects>project-1,project-2</projects>
+                <region>us-central1</region>
+                <zones>us-central1-b,us-central1-c</zones>
+                <label>key=value</label>
+                <hz-port>5701-5710</hz-port>
+                <use-public-ip>true</use-public-ip>
             </gcp>
             <azure enabled="false">
                 <instance-metadata-available>false</instance-metadata-available>
@@ -3075,6 +3120,8 @@
                 <resource-group>RESOURCE-GROUP-NAME</resource-group>
                 <scale-set>SCALE-SET-NAME</scale-set>
                 <tag>TAG-NAME=HZLCAST001</tag>
+                <hz-port>5701-5707</hz-port>
+                <use-public-ip>true</use-public-ip>
             </azure>
             <kubernetes enabled="false">
                 <namespace>MY-KUBERNETES-NAMESPACE</namespace>

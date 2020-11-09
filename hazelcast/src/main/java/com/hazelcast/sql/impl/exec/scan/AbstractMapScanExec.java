@@ -97,12 +97,6 @@ public abstract class AbstractMapScanExec extends AbstractExec {
 
         migrationStamp = getMigrationStamp();
         recordIterator = createIterator();
-
-        setup1(ctx);
-    }
-
-    protected void setup1(QueryFragmentContext ctx) {
-        // No-op.
     }
 
     @Override
@@ -127,12 +121,15 @@ public abstract class AbstractMapScanExec extends AbstractExec {
 
         boolean done = recordIterator.done();
 
+        // Validate that the results are consistent (operator-dependent)
+        validateConsistency();
+
         // Check for concurrent migration
         if (!validateMigrationStamp(migrationStamp)) {
             throw QueryException.error(
-                SqlErrorCode.PARTITION_DISTRIBUTION_CHANGED, "Map scan failed due to concurrent partition migration "
+                SqlErrorCode.PARTITION_DISTRIBUTION, "Map scan failed due to concurrent partition migration "
                 + "(result consistency cannot be guaranteed)"
-            ).withInvalidate();
+            ).markInvalidate();
         }
 
         // Check for concurrent map destroy
@@ -140,10 +137,14 @@ public abstract class AbstractMapScanExec extends AbstractExec {
             throw QueryException.error(
                 SqlErrorCode.MAP_DESTROYED,
                 "IMap has been destroyed concurrently: " + mapName
-            ).withInvalidate();
+            ).markInvalidate();
         }
 
         return done ? IterationResult.FETCHED_DONE : IterationResult.FETCHED;
+    }
+
+    protected void validateConsistency() {
+        // No-op.
     }
 
     @Override

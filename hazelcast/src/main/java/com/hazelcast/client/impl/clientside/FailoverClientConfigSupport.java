@@ -86,7 +86,7 @@ public final class FailoverClientConfigSupport {
     }
 
     /**
-     * For a client to be valid alternative, all configurations should be equal except
+     * For a client to be valid alternative, all configurations must be equal except
      * Cluster name
      * SecurityConfig
      * Discovery related parts of NetworkConfig
@@ -97,7 +97,7 @@ public final class FailoverClientConfigSupport {
      */
     private static void checkValidAlternative(List<ClientConfig> alternativeClientConfigs) {
         if (alternativeClientConfigs.isEmpty()) {
-            throw new InvalidConfigurationException("ClientFailoverConfig should have at least one client config.");
+            throw new InvalidConfigurationException("ClientFailoverConfig must have at least one client config.");
         }
         ClientConfig mainConfig = alternativeClientConfigs.get(0);
         for (ClientConfig alternativeClientConfig : alternativeClientConfigs.subList(1, alternativeClientConfigs.size())) {
@@ -130,6 +130,9 @@ public final class FailoverClientConfigSupport {
         }
         if (notEqual(mainConfig.getLoadBalancer(), alternativeConfig.getLoadBalancer())) {
             throwInvalidConfigurationException(mainClusterName, alterNativeClusterName, "loadBalancer");
+        }
+        if (notEqual(mainConfig.getLoadBalancerClassName(), alternativeConfig.getLoadBalancerClassName())) {
+            throwInvalidConfigurationException(mainClusterName, alterNativeClusterName, "loadBalancerClassName");
         }
         if (notEqual(mainConfig.getListenerConfigs(), alternativeConfig.getListenerConfigs())) {
             throwInvalidConfigurationException(mainClusterName, alterNativeClusterName, "listeners");

@@ -55,7 +55,7 @@ public class QueryOperationChannelTest extends SqlTestSupport {
     @After
     public void after() {
         if (operationHandler != null) {
-            operationHandler.stop();
+            operationHandler.shutdown();
         }
     }
 

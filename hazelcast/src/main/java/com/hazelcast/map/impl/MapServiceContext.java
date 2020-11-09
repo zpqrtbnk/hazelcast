@@ -48,6 +48,7 @@ import com.hazelcast.spi.impl.operationservice.Operation;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Semaphore;
 import java.util.function.Predicate;
 
 /**
@@ -133,12 +134,11 @@ public interface MapServiceContext extends MapServiceContextInterceptorSupport,
 
     RecordStore getExistingRecordStore(int partitionId, String mapName);
 
-    PartitionIdSet getOwnedPartitions();
-
     /**
-     * Reloads the cached collection of partitions owned by this node.
+     * Returns cached cached collection of owned partitions,
+     * When it is null, reloads and caches it again.
      */
-    void reloadOwnedPartitions();
+    PartitionIdSet getOrInitCachedMemberPartitions();
 
     void nullifyOwnedPartitions();
 
@@ -201,4 +201,6 @@ public interface MapServiceContext extends MapServiceContextInterceptorSupport,
     NodeWideUsedCapacityCounter getNodeWideUsedCapacityCounter();
 
     ExecutorStats getOffloadedEntryProcessorExecutorStats();
+
+    Semaphore getNodeWideLoadedKeyLimiter();
 }

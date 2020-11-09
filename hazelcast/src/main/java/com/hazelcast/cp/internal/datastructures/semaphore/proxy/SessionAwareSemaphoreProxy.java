@@ -98,7 +98,7 @@ public class SessionAwareSemaphoreProxy extends SessionAwareProxy implements ISe
             } catch (SessionExpiredException e) {
                 invalidateSession(sessionId);
             } catch (WaitKeyCancelledException e) {
-                releaseSession(sessionId);
+                releaseSession(sessionId, permits);
                 throw new IllegalStateException("Semaphore[" + objectName + "] not acquired because the acquire call "
                         + "on the CP group is cancelled, possibly because of another indeterminate call from the same thread.");
             }
@@ -145,7 +145,7 @@ public class SessionAwareSemaphoreProxy extends SessionAwareProxy implements ISe
                     return false;
                 }
             } catch (WaitKeyCancelledException e) {
-                releaseSession(sessionId);
+                releaseSession(sessionId, permits);
                 return false;
             }
         }
@@ -206,22 +206,7 @@ public class SessionAwareSemaphoreProxy extends SessionAwareProxy implements ISe
         if (reduction == 0) {
             return;
         }
-        long sessionId = acquireSession();
-        if (sessionId == NO_SESSION_ID) {
-            throw newIllegalStateException(null);
-        }
-
-        long threadId = getThreadId();
-        UUID invocationUid = newUnsecureUUID();
-        try {
-            RaftOp op = new ChangePermitsOp(objectName, sessionId, threadId, invocationUid, -reduction);
-            invocationManager.invoke(groupId, op).joinInternal();
-        } catch (SessionExpiredException e) {
-            invalidateSession(sessionId);
-            throw newIllegalStateException(e);
-        } finally {
-            releaseSession(sessionId);
-        }
+        doChangePermits(-reduction);
     }
 
     @Override
@@ -230,15 +215,15 @@ public class SessionAwareSemaphoreProxy extends SessionAwareProxy implements ISe
         if (increase == 0) {
             return;
         }
-        long sessionId = acquireSession();
-        if (sessionId == NO_SESSION_ID) {
-            throw newIllegalStateException(null);
-        }
+        doChangePermits(increase);
+    }
 
+    private void doChangePermits(int delta) {
+        long sessionId = acquireSession();
         long threadId = getThreadId();
         UUID invocationUid = newUnsecureUUID();
         try {
-            RaftOp op = new ChangePermitsOp(objectName, sessionId, threadId, invocationUid, increase);
+            RaftOp op = new ChangePermitsOp(objectName, sessionId, threadId, invocationUid, delta);
             invocationManager.invoke(groupId, op).joinInternal();
         } catch (SessionExpiredException e) {
             invalidateSession(sessionId);

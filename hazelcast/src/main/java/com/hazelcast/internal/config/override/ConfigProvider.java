@@ -13,24 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.hazelcast.internal.config.override;
 
-package com.hazelcast.security.permission;
+import java.util.Map;
 
-import java.security.Permission;
+/**
+ * An interface representing a generic configuration source.
+ */
+interface ConfigProvider {
 
-public class SqlPermission extends ClusterPermission {
+    /**
+     * @return Returns an immutable set of key-value configuration entries.
+     */
+    Map<String, String> properties();
 
-    public SqlPermission() {
-        super("<sql>");
-    }
-
-    @Override
-    public boolean implies(Permission permission) {
-        return getClass() == permission.getClass();
-    }
-
-    @Override
-    public String getActions() {
-        return "sql";
-    }
+    /**
+     * @return Returns a human readable identifier of the configuration source.
+     */
+    String name();
 }

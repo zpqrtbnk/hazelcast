@@ -20,11 +20,12 @@ import com.hazelcast.cluster.Member;
 import com.hazelcast.internal.util.collection.PartitionIdSet;
 import com.hazelcast.partition.Partition;
 import com.hazelcast.spi.impl.NodeEngine;
+import com.hazelcast.sql.HazelcastSqlException;
 import com.hazelcast.sql.SqlColumnMetadata;
 import com.hazelcast.sql.SqlColumnType;
-import com.hazelcast.sql.HazelcastSqlException;
 import com.hazelcast.sql.impl.schema.TableResolver;
 import com.hazelcast.sql.impl.type.QueryDataType;
+import com.hazelcast.sql.impl.type.QueryDataTypeFamily;
 import com.hazelcast.version.MemberVersion;
 
 import javax.annotation.Nullable;
@@ -177,7 +178,7 @@ public final class QueryUtils {
                 break;
 
             default:
-                assert columnType == QueryDataType.OBJECT;
+                assert columnType.getTypeFamily() == QueryDataTypeFamily.OBJECT;
 
                 type = SqlColumnType.OBJECT;
         }
@@ -191,11 +192,14 @@ public final class QueryUtils {
      * @param nodeEngine node engine
      * @param localMemberVersion version of the local member. If any of partition owners have a different version, an exception
      *                           is thrown. The check is ignored if passed version is {@code null}
+     * @param failOnUnassignedPartition whether the call should fail in case an unassigned partition is found; when set to
+     *                                  {@code false} the missing partitions will not be included in the result
      * @return partition mapping
      */
     public static Map<UUID, PartitionIdSet> createPartitionMap(
         NodeEngine nodeEngine,
-        @Nullable MemberVersion localMemberVersion
+        @Nullable MemberVersion localMemberVersion,
+        boolean failOnUnassignedPartition
     ) {
         Collection<Partition> parts = nodeEngine.getHazelcastInstance().getPartitionService().getPartitions();
 
@@ -205,6 +209,17 @@ public final class QueryUtils {
 
         for (Partition part : parts) {
             Member owner = part.getOwner();
+
+            if (owner == null) {
+                if (failOnUnassignedPartition) {
+                    throw QueryException.error(
+                        SqlErrorCode.PARTITION_DISTRIBUTION,
+                        "Partition is not assigned to any member: " + part.getPartitionId()
+                    ).markInvalidate();
+                } else {
+                    continue;
+                }
+            }
 
             if (localMemberVersion != null) {
                 if (!localMemberVersion.equals(owner.getVersion())) {
@@ -237,11 +252,7 @@ public final class QueryUtils {
         // Then add paths from table resolvers.
         if (tableResolvers != null) {
             for (TableResolver tableResolver : tableResolvers) {
-                List<List<String>> tableResolverSearchPaths = tableResolver.getDefaultSearchPaths();
-
-                if (tableResolverSearchPaths != null) {
-                    res.addAll(tableResolverSearchPaths);
-                }
+                res.addAll(tableResolver.getDefaultSearchPaths());
             }
         }
 

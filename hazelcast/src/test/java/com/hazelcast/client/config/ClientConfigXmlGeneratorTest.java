@@ -17,6 +17,7 @@
 package com.hazelcast.client.config;
 
 import com.hazelcast.client.LoadBalancer;
+import com.hazelcast.client.test.CustomLoadBalancer;
 import com.hazelcast.client.util.RandomLB;
 import com.hazelcast.config.AliasedDiscoveryConfig;
 import com.hazelcast.config.ConfigCompatibilityChecker;
@@ -38,6 +39,7 @@ import com.hazelcast.config.NativeMemoryConfig.MemoryAllocatorType;
 import com.hazelcast.config.NearCacheConfig;
 import com.hazelcast.config.NearCachePreloaderConfig;
 import com.hazelcast.config.PersistentMemoryDirectoryConfig;
+import com.hazelcast.config.PersistentMemoryMode;
 import com.hazelcast.config.PredicateConfig;
 import com.hazelcast.config.QueryCacheConfig;
 import com.hazelcast.config.SSLConfig;
@@ -85,6 +87,7 @@ import static com.hazelcast.config.MaxSizePolicy.USED_NATIVE_MEMORY_SIZE;
 import static com.hazelcast.config.NearCacheConfig.LocalUpdatePolicy.CACHE_ON_UPDATE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastParallelClassRunner.class)
@@ -333,6 +336,8 @@ public class ClientConfigXmlGeneratorTest extends HazelcastTestSupport {
         KerberosIdentityConfig identityConfig = new KerberosIdentityConfig()
                 .setRealm("realm")
                 .setSecurityRealm("security-realm")
+                .setPrincipal("jduke")
+                .setKeytabFile("/opt/keytab")
                 .setServiceNamePrefix("prefix")
                 .setSpn("spn");
         RealmConfig realmConfig = new RealmConfig().setJaasAuthenticationConfig(new JaasAuthenticationConfig()
@@ -468,8 +473,26 @@ public class ClientConfigXmlGeneratorTest extends HazelcastTestSupport {
                 .setPageSize(randomInt())
                 .setSize(new MemorySize(randomInt(), MemoryUnit.BYTES))
                 .getPersistentMemoryConfig()
+                .setEnabled(true)
                 .addDirectoryConfig(new PersistentMemoryDirectoryConfig("/mnt/pmem0", 0))
                 .addDirectoryConfig(new PersistentMemoryDirectoryConfig("/mnt/pmem1", 1));
+        clientConfig.setNativeMemoryConfig(expected);
+
+        NativeMemoryConfig actual = newConfigViaGenerator().getNativeMemoryConfig();
+        assertEquals(clientConfig.getNativeMemoryConfig(), actual);
+    }
+
+    @Test
+    public void nativeMemoryWithPersistentMemory_SystemMemoryMode() {
+        NativeMemoryConfig expected = new NativeMemoryConfig();
+        expected.setEnabled(true)
+                .setAllocatorType(MemoryAllocatorType.STANDARD)
+                .setMetadataSpacePercentage(70)
+                .setMinBlockSize(randomInt())
+                .setPageSize(randomInt())
+                .setSize(new MemorySize(randomInt(), MemoryUnit.BYTES))
+                .getPersistentMemoryConfig()
+                .setMode(PersistentMemoryMode.SYSTEM_MEMORY);
         clientConfig.setNativeMemoryConfig(expected);
 
         NativeMemoryConfig actual = newConfigViaGenerator().getNativeMemoryConfig();
@@ -490,8 +513,21 @@ public class ClientConfigXmlGeneratorTest extends HazelcastTestSupport {
     @Test
     public void loadBalancer() {
         clientConfig.setLoadBalancer(new RandomLB());
-        LoadBalancer actual = newConfigViaGenerator().getLoadBalancer();
+        ClientConfig newClientConfig = newConfigViaGenerator();
+        LoadBalancer actual = newClientConfig.getLoadBalancer();
         assertTrue(actual instanceof RandomLB);
+        String actualClassName = newClientConfig.getLoadBalancerClassName();
+        assertNull(actualClassName);
+    }
+
+    @Test
+    public void loadBalancerCustom() {
+        clientConfig.setLoadBalancer(new CustomLoadBalancer());
+        ClientConfig newClientConfig = newConfigViaGenerator();
+        LoadBalancer actual = newClientConfig.getLoadBalancer();
+        assertNull(actual);
+        String actualClassName = newClientConfig.getLoadBalancerClassName();
+        assertEquals("com.hazelcast.client.test.CustomLoadBalancer", actualClassName);
     }
 
     private NearCacheConfig createNearCacheConfig(String name) {

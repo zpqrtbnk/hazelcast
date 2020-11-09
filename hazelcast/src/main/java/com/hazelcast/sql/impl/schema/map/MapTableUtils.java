@@ -69,7 +69,7 @@ public final class MapTableUtils {
     ) {
         long entryCount = 0L;
 
-        PartitionIdSet ownerPartitions = context.getOwnedPartitions();
+        PartitionIdSet ownerPartitions = context.getOrInitCachedMemberPartitions();
 
         for (PartitionContainer partitionContainer : context.getPartitionContainers()) {
             if (!ownerPartitions.contains(partitionContainer.getPartitionId())) {

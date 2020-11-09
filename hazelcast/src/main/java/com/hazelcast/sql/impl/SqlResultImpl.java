@@ -16,6 +16,7 @@
 
 package com.hazelcast.sql.impl;
 
+import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.plan.Plan;
@@ -26,33 +27,33 @@ import com.hazelcast.sql.impl.state.QueryState;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Cursor implementation.
  */
 public final class SqlResultImpl extends AbstractSqlResult {
 
-    private final boolean isUpdateCount;
     private final QueryState state;
     private final SqlRowMetadata rowMetadata;
     private ResultIterator<SqlRow> iterator;
-    private final long updatedCount;
+    private final long updateCount;
 
-    private SqlResultImpl(boolean isUpdateCount, QueryState state, long updatedCount) {
-        this.isUpdateCount = isUpdateCount;
+    private SqlResultImpl(QueryState state, long updateCount) {
         this.state = state;
-        this.updatedCount = updatedCount;
-        assert isUpdateCount ^ state != null : "isUpdateCount" + isUpdateCount + ", state=" + state;
+        this.updateCount = updateCount;
+        assert updateCount >= 0 ^ state != null : "updateCount=" + updateCount + ", state=" + state;
 
         rowMetadata = state != null ? state.getInitiatorState().getRowMetadata() : null;
     }
 
     public static SqlResultImpl createRowsResult(QueryState state) {
-        return new SqlResultImpl(false, state, 0);
+        return new SqlResultImpl(state, -1);
     }
 
-    public static SqlResultImpl createUpdateCountResult(long updatedCount) {
-        return new SqlResultImpl(true, null, updatedCount);
+    public static SqlResultImpl createUpdateCountResult(long updateCount) {
+        Preconditions.checkNotNegative(updateCount, "the updateCount must be >= 0");
+        return new SqlResultImpl(null, updateCount);
     }
 
     @Nonnull
@@ -78,26 +79,19 @@ public final class SqlResultImpl extends AbstractSqlResult {
 
     @Override
     public long updateCount() {
-        if (!isUpdateCount) {
-            throw new IllegalStateException("This result doesn't contain update count");
-        }
-        return updatedCount;
-    }
-
-    @Override
-    public boolean isUpdateCount() {
-        return isUpdateCount;
+        return updateCount;
     }
 
     private void checkIsRowsResult() {
-        if (isUpdateCount) {
+        if (updateCount >= 0) {
             throw new IllegalStateException("This result contains only update count");
         }
     }
 
-    public void closeOnError(QueryException error) {
+    @Override
+    public void close(@Nullable QueryException error) {
         if (state != null) {
-            state.cancel(error);
+            state.cancel(error, false);
         }
     }
 
@@ -142,9 +136,9 @@ public final class SqlResultImpl extends AbstractSqlResult {
         }
 
         @Override
-        public HasNextImmediatelyResult hasNextImmediately() {
+        public HasNextResult hasNext(long timeout, TimeUnit timeUnit) {
             try {
-                return delegate.hasNextImmediately();
+                return delegate.hasNext(timeout, timeUnit);
             } catch (Exception e) {
                 throw QueryUtils.toPublicException(e, state.getLocalMemberId());
             }
