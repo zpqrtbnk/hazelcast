@@ -121,7 +121,8 @@ import java.util.UUID;
  * created, and then exchange is converted into a pair of appropriate send/receive operators. Send operator is added to the
  * previous fragment, receive operator is a starting point for the new fragment.
  */
-@SuppressWarnings({"rawtypes", "checkstyle:ClassDataAbstractionCoupling"})
+@SuppressWarnings({"rawtypes", "checkstyle:ClassDataAbstractionCoupling", "checkstyle:ClassFanOutComplexity",
+    "checkstyle:MethodCount"})
 public class PlanCreateVisitor implements PhysicalRelVisitor {
 
     private final UUID localMemberId;
