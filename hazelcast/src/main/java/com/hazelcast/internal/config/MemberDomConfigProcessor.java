@@ -61,7 +61,6 @@ import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MaxSizePolicy;
 import com.hazelcast.config.MemberAddressProviderConfig;
 import com.hazelcast.config.MemberGroupConfig;
-import com.hazelcast.config.MemcacheProtocolConfig;
 import com.hazelcast.config.MergePolicyConfig;
 import com.hazelcast.config.MerkleTreeConfig;
 import com.hazelcast.config.MetadataPolicy;
@@ -133,6 +132,7 @@ import com.hazelcast.config.security.TlsAuthenticationConfig;
 import com.hazelcast.config.security.TokenEncoding;
 import com.hazelcast.config.security.TokenIdentityConfig;
 import com.hazelcast.core.HazelcastException;
+import com.hazelcast.instance.EndpointQualifier;
 import com.hazelcast.instance.ProtocolType;
 import com.hazelcast.internal.util.StringUtil;
 import com.hazelcast.logging.ILogger;
@@ -254,7 +254,7 @@ public class MemberDomConfigProcessor extends AbstractDomConfigProcessor {
                 throw new InvalidConfigurationException(
                         "Duplicate '" + nodeName + "' definition found in the configuration.");
             }
-            if (handleNode(node, nodeName)) {
+            if (handleNode(node)) {
                 continue;
             }
             if (!canOccurMultipleTimes(nodeName)) {
@@ -265,7 +265,9 @@ public class MemberDomConfigProcessor extends AbstractDomConfigProcessor {
         validateNetworkConfig();
     }
 
-    private boolean handleNode(Node node, String nodeName) throws Exception {
+    private boolean handleNode(Node node) throws Exception {
+        String nodeName = cleanNodeName(node);
+
         if (matches(INSTANCE_NAME.getName(), nodeName)) {
             config.setInstanceName(getNonEmptyText(node, "Instance name"));
         } else if (matches(NETWORK.getName(), nodeName)) {
@@ -363,7 +365,7 @@ public class MemberDomConfigProcessor extends AbstractDomConfigProcessor {
     }
 
     private void handleUserCodeDeployment(Node dcRoot) {
-        UserCodeDeploymentConfig dcConfig = new UserCodeDeploymentConfig();
+        UserCodeDeploymentConfig dcConfig = config.getUserCodeDeploymentConfig();
         Node attrEnabled = getNamedItemNode(dcRoot, "enabled");
         boolean enabled = getBooleanValue(getTextContent(attrEnabled));
         dcConfig.setEnabled(enabled);
@@ -391,7 +393,7 @@ public class MemberDomConfigProcessor extends AbstractDomConfigProcessor {
 
     private void handleHotRestartPersistence(Node hrRoot)
             throws Exception {
-        HotRestartPersistenceConfig hrConfig = new HotRestartPersistenceConfig()
+        HotRestartPersistenceConfig hrConfig = config.getHotRestartPersistenceConfig()
                 .setEnabled(getBooleanValue(getAttribute(hrRoot, "enabled")));
 
         String parallelismName = "parallelism";
@@ -531,8 +533,8 @@ public class MemberDomConfigProcessor extends AbstractDomConfigProcessor {
     }
 
     protected void handleSplitBrainProtection(Node node) {
-        SplitBrainProtectionConfig splitBrainProtectionConfig = new SplitBrainProtectionConfig();
         String name = getAttribute(node, "name");
+        SplitBrainProtectionConfig splitBrainProtectionConfig = config.getSplitBrainProtectionConfig(name);
         splitBrainProtectionConfig.setName(name);
         handleSplitBrainProtectionNode(node, splitBrainProtectionConfig, name);
     }
@@ -845,13 +847,15 @@ public class MemberDomConfigProcessor extends AbstractDomConfigProcessor {
     }
 
     private void handleMemberServerSocketEndpointConfig(Node node) throws Exception {
-        ServerSocketEndpointConfig config = new ServerSocketEndpointConfig();
+        ServerSocketEndpointConfig config = (ServerSocketEndpointConfig) this.config.getAdvancedNetworkConfig()
+          .getEndpointConfigs().getOrDefault(EndpointQualifier.MEMBER, new ServerSocketEndpointConfig());
         config.setProtocolType(ProtocolType.MEMBER);
         handleServerSocketEndpointConfig(config, node);
     }
 
     private void handleClientServerSocketEndpointConfig(Node node) throws Exception {
-        ServerSocketEndpointConfig config = new ServerSocketEndpointConfig();
+        ServerSocketEndpointConfig config = (ServerSocketEndpointConfig) this.config.getAdvancedNetworkConfig()
+          .getEndpointConfigs().getOrDefault(EndpointQualifier.CLIENT, new ServerSocketEndpointConfig());
         config.setProtocolType(ProtocolType.CLIENT);
         handleServerSocketEndpointConfig(config, node);
     }
@@ -863,7 +867,8 @@ public class MemberDomConfigProcessor extends AbstractDomConfigProcessor {
     }
 
     private void handleRestServerSocketEndpointConfig(Node node) throws Exception {
-        RestServerEndpointConfig config = new RestServerEndpointConfig();
+        RestServerEndpointConfig config = (RestServerEndpointConfig) this.config.getAdvancedNetworkConfig()
+          .getEndpointConfigs().getOrDefault(EndpointQualifier.REST, new RestServerEndpointConfig());
         handleServerSocketEndpointConfig(config, node);
         for (Node child : childElements(node)) {
             String nodeName = cleanNodeName(child);
@@ -876,7 +881,8 @@ public class MemberDomConfigProcessor extends AbstractDomConfigProcessor {
     }
 
     private void handleMemcacheServerSocketEndpointConfig(Node node) throws Exception {
-        ServerSocketEndpointConfig config = new ServerSocketEndpointConfig();
+        ServerSocketEndpointConfig config = (ServerSocketEndpointConfig) this.config.getAdvancedNetworkConfig()
+          .getEndpointConfigs().getOrDefault(EndpointQualifier.MEMCACHE, new ServerSocketEndpointConfig());
         config.setProtocolType(ProtocolType.MEMCACHE);
         handleServerSocketEndpointConfig(config, node);
     }
@@ -908,18 +914,15 @@ public class MemberDomConfigProcessor extends AbstractDomConfigProcessor {
                 handleEndpointConfigCommons(child, nodeName, endpointConfig);
             }
         }
-        addEndpointConfig(endpointConfig);
-    }
 
-    private void addEndpointConfig(EndpointConfig endpointConfig) {
         switch (endpointConfig.getProtocolType()) {
             case MEMBER:
                 ensureServerSocketEndpointConfig(endpointConfig);
-                config.getAdvancedNetworkConfig().setMemberEndpointConfig((ServerSocketEndpointConfig) endpointConfig);
+                config.getAdvancedNetworkConfig().setMemberEndpointConfig(endpointConfig);
                 break;
             case CLIENT:
                 ensureServerSocketEndpointConfig(endpointConfig);
-                config.getAdvancedNetworkConfig().setClientEndpointConfig((ServerSocketEndpointConfig) endpointConfig);
+                config.getAdvancedNetworkConfig().setClientEndpointConfig(endpointConfig);
                 break;
             case REST:
                 ensureServerSocketEndpointConfig(endpointConfig);
@@ -929,7 +932,7 @@ public class MemberDomConfigProcessor extends AbstractDomConfigProcessor {
                 config.getAdvancedNetworkConfig().addWanEndpointConfig(endpointConfig);
                 break;
             case MEMCACHE:
-                config.getAdvancedNetworkConfig().setMemcacheEndpointConfig((ServerSocketEndpointConfig) endpointConfig);
+                config.getAdvancedNetworkConfig().setMemcacheEndpointConfig(endpointConfig);
                 break;
             default:
                 throw new InvalidConfigurationException("Endpoint config has invalid protocol type "
@@ -988,18 +991,22 @@ public class MemberDomConfigProcessor extends AbstractDomConfigProcessor {
     }
 
     protected void handleExecutor(Node node) throws Exception {
-        ExecutorConfig executorConfig = new ExecutorConfig();
+        String name = getTextContent(getNamedItemNode(node, "name"));
+        ExecutorConfig executorConfig = config.getExecutorConfig(name);
+
         handleViaReflection(node, config, executorConfig);
     }
 
     protected void handleDurableExecutor(Node node) throws Exception {
-        DurableExecutorConfig durableExecutorConfig = new DurableExecutorConfig();
+        String name = getTextContent(getNamedItemNode(node, "name"));
+        DurableExecutorConfig durableExecutorConfig = config.getDurableExecutorConfig(name);
+
         handleViaReflection(node, config, durableExecutorConfig);
     }
 
     protected void handleScheduledExecutor(Node node) {
-        ScheduledExecutorConfig scheduledExecutorConfig = new ScheduledExecutorConfig();
-        scheduledExecutorConfig.setName(getTextContent(getNamedItemNode(node, "name")));
+        String name = getTextContent(getNamedItemNode(node, "name"));
+        ScheduledExecutorConfig scheduledExecutorConfig = config.getScheduledExecutorConfig(name);
 
         handleScheduledExecutorNode(node, scheduledExecutorConfig);
     }
@@ -1028,8 +1035,8 @@ public class MemberDomConfigProcessor extends AbstractDomConfigProcessor {
     }
 
     protected void handleCardinalityEstimator(Node node) {
-        CardinalityEstimatorConfig cardinalityEstimatorConfig = new CardinalityEstimatorConfig();
-        cardinalityEstimatorConfig.setName(getTextContent(getNamedItemNode(node, "name")));
+        CardinalityEstimatorConfig cardinalityEstimatorConfig = config.getCardinalityEstimatorConfig(
+          getTextContent(getNamedItemNode(node, "name")));
 
         handleCardinalityEstimatorNode(node, cardinalityEstimatorConfig);
     }
@@ -1053,13 +1060,14 @@ public class MemberDomConfigProcessor extends AbstractDomConfigProcessor {
     }
 
     protected void handlePNCounter(Node node) throws Exception {
-        PNCounterConfig pnCounterConfig = new PNCounterConfig();
+        String name = getAttribute(node, "name");
+        PNCounterConfig pnCounterConfig = config.getPNCounterConfig(name);
         handleViaReflection(node, config, pnCounterConfig);
     }
 
     protected void handleFlakeIdGenerator(Node node) {
         String name = getAttribute(node, "name");
-        FlakeIdGeneratorConfig generatorConfig = new FlakeIdGeneratorConfig(name);
+        FlakeIdGeneratorConfig generatorConfig = config.getFlakeIdGeneratorConfig(name);
         handleFlakeIdGeneratorNode(node, generatorConfig);
     }
 
@@ -2646,15 +2654,12 @@ public class MemberDomConfigProcessor extends AbstractDomConfigProcessor {
     }
 
     private void handleMemcacheProtocol(Node node) {
-        MemcacheProtocolConfig memcacheProtocolConfig = new MemcacheProtocolConfig();
-        config.getNetworkConfig().setMemcacheProtocolConfig(memcacheProtocolConfig);
-        boolean enabled = getBooleanValue(getAttribute(node, "enabled"));
-        memcacheProtocolConfig.setEnabled(enabled);
+        config.getNetworkConfig().getMemcacheProtocolConfig()
+            .setEnabled(getBooleanValue(getAttribute(node, "enabled")));
     }
 
     private void handleRestApi(Node node) {
-        RestApiConfig restApiConfig = new RestApiConfig();
-        config.getNetworkConfig().setRestApiConfig(restApiConfig);
+        RestApiConfig restApiConfig = config.getNetworkConfig().getRestApiConfig();
         boolean enabled = getBooleanValue(getAttribute(node, "enabled"));
         restApiConfig.setEnabled(enabled);
         handleRestApiEndpointGroups(node);

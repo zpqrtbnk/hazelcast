@@ -317,18 +317,18 @@ public class YamlMemberDomConfigProcessor extends MemberDomConfigProcessor {
     @Override
     protected void handleSplitBrainProtection(Node node) {
         for (Node splitBrainProtectionNode : childElements(node)) {
-            SplitBrainProtectionConfig splitBrainProtectionConfig = new SplitBrainProtectionConfig();
-            String splitBrainProtectionName = splitBrainProtectionNode.getNodeName();
-            splitBrainProtectionConfig.setName(splitBrainProtectionName);
-            handleSplitBrainProtectionNode(splitBrainProtectionNode, splitBrainProtectionConfig, splitBrainProtectionName);
+            String name = splitBrainProtectionNode.getNodeName();
+            SplitBrainProtectionConfig splitBrainProtectionConfig = config.getSplitBrainProtectionConfig(name);
+            handleSplitBrainProtectionNode(splitBrainProtectionNode, splitBrainProtectionConfig, name);
         }
     }
 
     @Override
     protected void handleFlakeIdGenerator(Node node) {
         for (Node genNode : childElements(node)) {
-            FlakeIdGeneratorConfig genConfig = new FlakeIdGeneratorConfig();
-            genConfig.setName(genNode.getNodeName());
+            FlakeIdGeneratorConfig genConfig = config
+              .getFlakeIdGeneratorConfig(genNode.getNodeName());
+
             handleFlakeIdGeneratorNode(genNode, genConfig);
         }
     }
@@ -336,8 +336,7 @@ public class YamlMemberDomConfigProcessor extends MemberDomConfigProcessor {
     @Override
     protected void handleExecutor(Node node) throws Exception {
         for (Node executorNode : childElements(node)) {
-            ExecutorConfig executorConfig = new ExecutorConfig();
-            executorConfig.setName(executorNode.getNodeName());
+            ExecutorConfig executorConfig = config.getExecutorConfig(executorNode.getNodeName());
             handleViaReflection(executorNode, config, executorConfig);
         }
     }
@@ -345,8 +344,7 @@ public class YamlMemberDomConfigProcessor extends MemberDomConfigProcessor {
     @Override
     protected void handleDurableExecutor(Node node) throws Exception {
         for (Node executorNode : childElements(node)) {
-            DurableExecutorConfig executorConfig = new DurableExecutorConfig();
-            executorConfig.setName(executorNode.getNodeName());
+            DurableExecutorConfig executorConfig = config.getDurableExecutorConfig(executorNode.getNodeName());
             handleViaReflection(executorNode, config, executorConfig);
         }
     }
@@ -354,8 +352,7 @@ public class YamlMemberDomConfigProcessor extends MemberDomConfigProcessor {
     @Override
     protected void handleScheduledExecutor(Node node) {
         for (Node executorNode : childElements(node)) {
-            ScheduledExecutorConfig executorConfig = new ScheduledExecutorConfig();
-            executorConfig.setName(executorNode.getNodeName());
+            ScheduledExecutorConfig executorConfig = config.getScheduledExecutorConfig(executorNode.getNodeName());
             handleScheduledExecutorNode(executorNode, executorConfig);
         }
     }
@@ -363,8 +360,9 @@ public class YamlMemberDomConfigProcessor extends MemberDomConfigProcessor {
     @Override
     protected void handleCardinalityEstimator(Node node) {
         for (Node estimatorNode : childElements(node)) {
-            CardinalityEstimatorConfig estimatorConfig = new CardinalityEstimatorConfig();
-            estimatorConfig.setName(estimatorNode.getNodeName());
+            CardinalityEstimatorConfig estimatorConfig = config
+              .getCardinalityEstimatorConfig(estimatorNode.getNodeName());
+
             handleCardinalityEstimatorNode(estimatorNode, estimatorConfig);
         }
     }
@@ -372,8 +370,9 @@ public class YamlMemberDomConfigProcessor extends MemberDomConfigProcessor {
     @Override
     protected void handlePNCounter(Node node) throws Exception {
         for (Node counterNode : childElements(node)) {
-            PNCounterConfig counterConfig = new PNCounterConfig();
-            counterConfig.setName(counterNode.getNodeName());
+            PNCounterConfig counterConfig = config
+              .getPNCounterConfig(counterNode.getNodeName());
+
             handleViaReflection(counterNode, config, counterConfig);
         }
     }
