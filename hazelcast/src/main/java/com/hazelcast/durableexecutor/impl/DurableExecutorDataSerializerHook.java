@@ -48,6 +48,7 @@ public class DurableExecutorDataSerializerHook implements DataSerializerHook {
     public static final int TASK_BACKUP = 7;
     public static final int TASK = 8;
     public static final int PUT_RESULT_BACKUP = 9;
+    public static final int NET_CALLABLE = 10;
 
     @Override
     public int getFactoryId() {
@@ -80,6 +81,8 @@ public class DurableExecutorDataSerializerHook implements DataSerializerHook {
                         return new TaskBackupOperation();
                     case TASK:
                         return new TaskOperation();
+                    case NET_CALLABLE:
+                        return new NetCallable();
                     default:
                         return null;
                 }
