@@ -49,6 +49,7 @@
         <module>kinesis</module>
         <module>mapstore</module>
         <module>mongodb</module>
+        <module>dotnet</module>
         <module>s3</module>
     </modules>
 
