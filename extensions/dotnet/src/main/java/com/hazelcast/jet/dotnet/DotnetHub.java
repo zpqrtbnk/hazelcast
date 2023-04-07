@@ -19,50 +19,30 @@ import java.util.concurrent.TimeUnit;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-public class DotnetHub {
+public final class DotnetHub {
 
-    private static Map<String, DotnetHub> hubs = new HashMap<>();
-    private int references;
-    private DotnetServiceContext serviceContext;
+    private final DotnetServiceContext serviceContext;
+    private final Queue<AsynchronousFileChannel> channels;
+    private final ILogger logger;
     private Process dotnetProcess;
     private String dotnetProcessId;
-    private Queue<AsynchronousFileChannel> channels;
-    private ILogger logger;
     private Thread stdoutLoggingThread;
 
     DotnetHub (DotnetServiceContext serviceContext) {
         this.serviceContext = serviceContext;
         this.channels = new ConcurrentLinkedQueue<>();
         this.logger = serviceContext.getLogger();
-    }
 
-    public static DotnetHub get(DotnetServiceContext serviceContext) {
-        // each instance (member) has its own hub which controls 1 dotnet process
-        // TODO: in real-life ... we may want to merge hub and service
         String instanceName = serviceContext.getInstanceName();
-        DotnetHub hub;
-        if (hubs.containsKey(instanceName)) {
-            hub = hubs.get(instanceName);
-            hub.references++;
-            return hub;
-        }
-
-        hub = new DotnetHub(serviceContext);
-        hub.references++;
         serviceContext.getLogger().info("Created dotnet hub for " + instanceName);
         try {
-            hub.startProcess();
-            hub.connectChannels();
+            startProcess();
+            openChannels();
         }
         catch (Exception e) {
             serviceContext.getLogger().severe(e);
+            // FIXME and then what?
         }
-        hubs.put(instanceName, hub);
-        return hub;
-    }
-
-    public void free() {
-         if (--references == 0) destroy();
     }
 
     public void destroy() {
@@ -83,28 +63,32 @@ public class DotnetHub {
     private void startProcess() throws IOException {
         DotnetServiceConfig config = serviceContext.getConfig();
         String pipeName = serviceContext.getPipeName();
+        String methodName = config.getMethodName();
 
         String dotnetExe = config.getDotnetPath() + File.separator + config.getDotnetExe();
         int channelsCount = config.getLocalParallelism() * config.getMaxConcurrentOps();
-        ProcessBuilder builder = new ProcessBuilder(dotnetExe, pipeName, Integer.toString(channelsCount));
+        ProcessBuilder builder = new ProcessBuilder(dotnetExe, pipeName, Integer.toString(channelsCount), methodName);
         dotnetProcess = builder
                 .directory(Paths.get(config.getDotnetPath()).toFile())
                 .redirectErrorStream(true)
                 .start();
 
         dotnetProcessId = ProcessExtensions.processPid(dotnetProcess);
-        stdoutLoggingThread = logStdOut(logger, dotnetProcess, dotnetProcessId);
-        logger.info("Started dotnet hub [" + dotnetProcessId + "] for " + serviceContext.getInstanceName() + " at " + pipeName);
+        stdoutLoggingThread = ProcessExtensions.logStdOut(dotnetProcess, logger);
+        logger.info("Started dotnet hub [" + dotnetProcessId + ":" + methodName + "] for " + serviceContext.getInstanceName() + " at " + pipeName);
     }
 
-    private void connectChannels() throws IOException {
+    private void openChannels() throws IOException {
+
+        // TODO: we need to wait for the process to be ready = retry
+
         DotnetServiceConfig config = serviceContext.getConfig();
         int channelsCount = config.getLocalParallelism() * config.getMaxConcurrentOps();
         Path pipePath = serviceContext.getPipePath();
         for (int i = 0; i < channelsCount; i++)
             channels.add(openAsynchronousChannel(pipePath)); // FIXME what-if it fails?
 
-        logger.info("Connected " + channels.size() + " dotnet hub channels for " + serviceContext.getInstanceName() + " at " + serviceContext.getPipeName());
+        logger.info("Opened " + channels.size() + " channels to hub for " + serviceContext.getInstanceName() + " at " + serviceContext.getPipeName());
     }
 
     private void stopProcess() {
@@ -125,6 +109,9 @@ public class DotnetHub {
         catch (Exception e) {
             logger.warning(e);
         }
+
+        // TODO: see python code, here we expect the process to terminate nicely
+        // but if we cannot get a channel or for other reasons, we might have to kill it?
 
         try { // TODO: do better
             stdoutLoggingThread.join();
@@ -153,19 +140,5 @@ public class DotnetHub {
             }
         }
         return channel;
-    }
-
-    static Thread logStdOut(ILogger logger, Process process, String processId) {
-        Thread thread = new Thread(() -> {
-            try (BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream(), UTF_8))) {
-                for (String line; (line = in.readLine()) != null; ) {
-                    logger.fine(line);
-                }
-            } catch (IOException e) {
-                logger.severe("Reading init script output failed", e);
-            }
-        }, "dotnet-hub-logger-" + processId);
-        thread.start();
-        return thread;
     }
 }

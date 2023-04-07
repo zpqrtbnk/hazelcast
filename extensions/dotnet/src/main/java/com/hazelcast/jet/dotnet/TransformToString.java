@@ -1,12 +1,15 @@
 package com.hazelcast.jet.dotnet;
 
-import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.util.concurrent.CompletableFuture;
 
-public class ProcessDotnetAsync {
+public class TransformToString {
 
-    public static CompletableFuture<String> processAsync(int input, DotnetServiceContext context, DotnetHub dotnetHub) {
+    public static CompletableFuture<String> mapJavaAsync(int input, DotnetServiceContext context) {
+        return CompletableFuture.completedFuture("__" + input + "__");
+    }
+
+    public static CompletableFuture<String> mapDotnetAsync(int input, DotnetServiceContext context, DotnetHub dotnetHub) {
 
         try {
             AsynchronousFileChannel channel = dotnetHub.getChannel();
@@ -22,7 +25,8 @@ public class ProcessDotnetAsync {
             ChannelExtensions.writeInteger(channel, input);
 
             // create a reader, and obtain a future representing the reader waiting for the result
-            return new DotnetChannelReader(dotnetHub, channel).read();
+            context.getLogger().info("Sent " + input + ", wait for answer...");
+            return new ChannelStringReader(dotnetHub, channel).read();
         }
         catch (Exception e) {
             // FIXME what shall we do if we cannot proceed?

@@ -110,4 +110,7 @@ public class DeserializingEntry<K, V> implements Entry<K, V>, HazelcastInstanceA
     private Data toData(Object value, Data defaultValue) {
         return value != null ? serializationService.toData(value) : defaultValue;
     }
+
+    public Data getDataKey() { return dataKey; }
+    public Data getDataValue() { return dataValue; }
 }

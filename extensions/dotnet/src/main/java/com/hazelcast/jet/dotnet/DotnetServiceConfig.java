@@ -6,10 +6,8 @@ public class DotnetServiceConfig implements Serializable {
 
     private String dotnetPath;
     private String dotnetExe;
-    private Class inputClass;
-    private Class outputClass;
     private String methodName;
-    private String pipeName;
+    private String pipeName = "dotnet-jet";
     private int maxConcurrentOps = 4;
     private int localParallelism = 2;
     private boolean preserveOrder = true;
@@ -24,18 +22,6 @@ public class DotnetServiceConfig implements Serializable {
     public void setDotnetExe(String value) { dotnetExe = value; }
     public DotnetServiceConfig withDotnetExe(String value) {
         setDotnetExe(value);
-        return this;
-    }
-    public Class getInputClass() { return inputClass; }
-    public void setInputClass(Class klass) { inputClass = klass; }
-    public DotnetServiceConfig withInputClass(Class klass) {
-        setInputClass(klass);
-        return this;
-    }
-    public Class getOutputClass() { return outputClass; }
-    public void setOutputClass(Class klass) { outputClass = klass; }
-    public DotnetServiceConfig withOutputClass(Class klass) {
-        setOutputClass(klass);
         return this;
     }
     public String getMethodName() { return methodName; }
@@ -61,6 +47,11 @@ public class DotnetServiceConfig implements Serializable {
     public DotnetServiceConfig withLocalParallelism(int value) {
         setLocalParallelism(value);
         return this;
+    }
+    public DotnetServiceConfig withParallelism(int processors, int operations) {
+        return this
+                .withLocalParallelism(processors)
+                .withMaxConcurrentOps(operations);
     }
     public boolean getPreserveOrder() { return preserveOrder; }
     public void setPreserveOrder(boolean value) { preserveOrder = value; }

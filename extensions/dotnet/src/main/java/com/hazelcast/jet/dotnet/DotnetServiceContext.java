@@ -10,8 +10,8 @@ import java.util.UUID;
 
 class DotnetServiceContext {
 
-    private ProcessorSupplier.Context processorContext;
-    private DotnetServiceConfig config;
+    private final ProcessorSupplier.Context processorContext;
+    private final DotnetServiceConfig config;
 
     DotnetServiceContext(ProcessorSupplier.Context processorContext, DotnetServiceConfig serviceConfig) {
         this.processorContext = processorContext;
@@ -34,7 +34,4 @@ class DotnetServiceContext {
     }
 
     public String getInstanceName() { return getProcessorContext().hazelcastInstance().getName(); }
-
-    void destroy() {
-    }
 }

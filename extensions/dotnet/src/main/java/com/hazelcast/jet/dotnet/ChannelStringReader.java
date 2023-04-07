@@ -8,46 +8,35 @@ import java.nio.channels.CompletionHandler;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 
-public class DotnetChannelReader {
+public class ChannelStringReader {
 
-    private DotnetHub dotnetHub;
-    private AsynchronousFileChannel channel;
+    private final DotnetHub dotnetHub;
+    private final AsynchronousFileChannel channel;
+    private final CompletionHandler<Integer, ChannelStringReader> completionHandler;
     private ByteBuffer buffer;
     private CompletableFuture future;
     private int readCount;
     private int state;
     private int length;
-    private CompletionHandler<Integer, DotnetChannelReader> completionHandler;
 
-    public DotnetChannelReader(DotnetHub dotnetHub, AsynchronousFileChannel channel, ByteBuffer buffer, CompletableFuture future) {
-        this.dotnetHub = dotnetHub;
-        this.channel = channel;
-        this.buffer = buffer;
-        this.future = future;
-
-        readCount = 0;
-        state = 0;
-        completionHandler = createCompletionHandler(); // could it be static?
-    }
-
-    public DotnetChannelReader(DotnetHub dotnetHub, AsynchronousFileChannel channel) {
+    public ChannelStringReader(DotnetHub dotnetHub, AsynchronousFileChannel channel) {
         this.dotnetHub = dotnetHub;
         this.channel = channel;
 
         readCount = 0;
         state = 0;
-        completionHandler = createCompletionHandler(); // could it be static?
+        completionHandler = createCompletionHandler();
     }
 
-    private static CompletionHandler<Integer, DotnetChannelReader> createCompletionHandler() {
+    private static CompletionHandler<Integer, ChannelStringReader> createCompletionHandler() {
 
-        return new CompletionHandler<Integer, DotnetChannelReader>() {
+        return new CompletionHandler<Integer, ChannelStringReader>() {
             @Override
-            public void completed(Integer count, DotnetChannelReader reader) {
+            public void completed(Integer count, ChannelStringReader reader) {
                 reader.readCompleted(count);
             }
             @Override
-            public void failed(Throwable exc, DotnetChannelReader reader) {
+            public void failed(Throwable exc, ChannelStringReader reader) {
                 reader.readFailed(exc);
             }
         };
@@ -56,21 +45,23 @@ public class DotnetChannelReader {
     private void readCompleted(Integer count) {
         // read until we have enough bytes, re-read as long as we don't...
         if (count < 0) {
-            // is that even possible? and then, is it a failure?
+            // FIXME can this happen and mean the channel is gone? and then?
             future.complete("WTF");
         }
         else {
             readCount += count;
-
+            //Logger.getLogger("ChannelReader").info("Received " + count + " -> " + readCount);
             switch (state) {
                 case 0: // waiting for length
                     if (readCount < 2) readChannel(); // read more
                     else {
                         length = buffer.get(0) + (buffer.get(1) << 8);
+                        //Logger.getLogger("ChannelReader").info("Received length from dotnet process: " + length);
                         buffer = ByteBuffer.allocate(length);
                         buffer.clear();
                         readCount = 0;
                         state = 1; // wait for string
+                        readChannel(); // read more
                     }
                     break;
                 case 1: // waiting for string
