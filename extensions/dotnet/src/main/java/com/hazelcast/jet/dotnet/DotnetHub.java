@@ -7,10 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.channels.AsynchronousFileChannel;
-import java.nio.file.FileSystemException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
@@ -92,6 +89,16 @@ public final class DotnetHub {
         //try {
         //    channel = openAsynchronousChannel(pipePath);
         //}
+        int waitCount = 0;
+        while (!Files.exists(pipePath)) {
+            try {
+                TimeUnit.MILLISECONDS.sleep(1000);
+            }
+            catch (InterruptedException ie) {
+                // ??
+            }
+            if (waitCount++ == 10) throw new FileSystemException("Channel not found " + pipePath);
+        }
 
         for (int i = 0; i < channelsCount; i++)
             channels.add(openAsynchronousChannel(pipePath)); // FIXME what-if it fails?
