@@ -53,6 +53,7 @@
                 <include>com.hazelcast.jet:hazelcast-jet-mongodb</include>
                 <include>com.hazelcast.jet:hazelcast-jet-protobuf</include>
                 <include>com.hazelcast.jet:hazelcast-jet-python</include>
+                <include>com.hazelcast.jet:hazelcast-jet-dotnet</include>
                 <include>com.hazelcast.jet:hazelcast-jet-s3</include>
                 <include>com.hazelcast:hazelcast-3-connector-interface</include>
                 <include>com.hazelcast:hazelcast-3-connector-common</include>
