@@ -11,6 +11,7 @@ import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.map.IMap;
 import com.hazelcast.test.annotation.NightlyTest;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -82,17 +83,6 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
         initialize(2, config);
     }
 
-    /*
-    @Test
-    public void dotnetHub() {
-        // meh. we need a processorContext
-        DotnetServiceConfig serviceConfig = new DotnetServiceConfig();
-        DotnetServiceContext serviceContext = new DotnetServiceContext(processorContext, serviceConfig);
-        DotnetHub dotnetHub = new DotnetHub(serviceContext);
-        dotnetHub.destroy();
-    }
-    */
-
     @Test
     public void toStringUsingJava() {
         toStringUsing("toStringJava");
@@ -125,8 +115,10 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
         Pipeline p = Pipeline.create();
         p
                 .readFrom(TestSources.items(items)).addTimestamps(x -> 0, 0)
+
                 .apply(DotnetTransforms.<Integer, String>mapAsync(config))
                 .setLocalParallelism(config.getLocalParallelism()) // number of processors per member
+
                 .writeTo(AssertionSinks.assertAnyOrder("Fail to get expected items.", expected));
 
         // submit the job & wait for completion
@@ -146,56 +138,62 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
 
         // we're going to work with a map journal source
         // the journal is activated in the member config (see top of this file)
-        IMap map = instance().getMap("streamed-map");
 
         // compose the pipeline
         Pipeline p = Pipeline.create();
         p
-                //.readFrom(Sources.<String, SomeThing>mapJournal("streamed-map", JournalInitialPosition.START_FROM_CURRENT))
-                .readFrom(Sources.<String, Object>mapJournal("streamed-map", JournalInitialPosition.START_FROM_CURRENT))
+                // source stage produces Entry<...> open generics
+                .readFrom(Sources.mapJournal("streamed-map", JournalInitialPosition.START_FROM_CURRENT))
                 .withIngestionTimestamps()
-                //.apply(DotnetTransforms.<Map.Entry<String, SomeThing>, OtherThing>mapAsync(config))
-                .apply(DotnetTransforms.mapAsync(config))
-                //.setLocalParallelism(config.getLocalParallelism()) // number of processors per member
-                .writeTo(Sinks.logger());
 
-        // TODO: could we gather them somewhere instead of sinking to logger?
+                // dotnet transform produces an array of objects
+                .apply(DotnetTransforms.mapAsync(config))
+                .setLocalParallelism(config.getLocalParallelism()) // number of processors per member
+
+                // we know that the objects are [0]:keyData and [1]:valueData
+                .writeTo(Sinks.map("result-map", x -> ((Object[])x)[0], x -> ((Object[])x)[1]));
+
+        // troubleshooting:
+        //.writeTo(Sinks.logger());
 
         // submit the job
         Job job = instance().getJet().newJob(p);
 
         // wait for the job to be actually running
+        // else, whatever we put in the map will not be processed (?)
         JobStatus status = job.getStatus();
         while (status != JobStatus.RUNNING) {
             try { Thread.sleep(1_000); } catch (InterruptedException e) { }
             status = job.getStatus();
         }
 
-        // now anytime we add a string,someThing entry to streamed-map, the job should produce a corresponding OtherThing
+        final int testSize = 8;
+
+        // now anytime we add an entry to streamed-map, the job should produce a corresponding entry
+        IMap sourceMap = instance().getMap("streamed-map");
         Logger.getLogger("TEST").info("set values in map...");
-        map.clear();
-        for (int i = 0; i < 4; i++)
-            map.set("thing-" + i, new SomeThing());
+        sourceMap.clear();
+        for (int i = 0; i < testSize; i++)
+            sourceMap.set("thing-" + i, new SomeThing());
         Logger.getLogger("TEST").info("done setting values in map...");
 
-        // should we wait?
-        try { Thread.sleep(2_000); } catch (InterruptedException e) { }
+        // wait, the result map is going to be populated by the job
+        IMap resultMap = instance().getMap("result-map");
+        int timeoutSeconds = 30;
+        while (resultMap.size() < testSize && --timeoutSeconds > 0)
+            try { Thread.sleep(1_000); } catch (InterruptedException e) { }
 
-        // without the dotnet step, the sink logs:
-        // {serialized, 19 bytes}={serialized, 16 bytes}
-        // with the dotnet step, it logs the same
-        // except if we view the input with the debugger and then, it logs:
-        // thing-2=com.hazelcast.jet.dotnet.SomeThing@2566a739
-        // BUT it does not log anything from the dotnet task itself?!
-        //
-        // we get the values as DeserializingEntry which contain DATA for both key and value
-        // we could extract them and pass them directly to dotnet without deserializing
-        // also DeserializingEntry has a writeData/readData methods for ObjectDataInput/Output
+        Assert.assertNotEquals(0, timeoutSeconds);
+
+        // we get the values as DeserializingEntry which contain DATA for both key and value,
+        // which we extract and pass directly to .NET (so, no duplicate de-serialization). and
+        // .NET returns DATA too, which we pass to Java map.set which detects it's already
+        // serialized (so, no duplicate serialization either).
         //
         // is this linked to how entries are kept BINARY vs OBJECT?
 
         // streaming jobs run until canceled, and then they end up in a failed state
-        // FIXME and then how can we prevent the test to fail?
+        // try/catch the join 'cos cancellation is an exception, apparently
         job.cancel();
         try {
             job.join();

@@ -3,7 +3,8 @@ if [ -z "$SCRIPT_DIR" ]; then
   exit 1;
 fi;
 
-export HAZELCAST_HOME="$(cd "$SCRIPT_DIR/.." && pwd)"
+export HAZELCAST_HOME=$(cd "$SCRIPT_DIR/.." && pwd)
+echo "HAZELCAST_HOME=$HAZELCAST_HOME"
 
 if [ "$JAVA_HOME" ]; then
     JAVA="$JAVA_HOME/bin/java"
@@ -15,6 +16,7 @@ if [ -z "$JAVA" ]; then
     echo "Cannot find a way to start the JVM: neither JAVA_HOME is set nor the java command is on the PATH"
     exit 1
 fi
+echo "JAVA=$JAVA"
 
 # Bash on Windows may produce paths such as /c/path/to/lib and Java wants c:\path\to\lib
 # and, in this case, the cygpath command *should* be available - and then we will use it
@@ -41,7 +43,8 @@ fi
 
 # 1 -> Java 8 or earlier (1.8..)
 # 9, 10, 11 -> JDK9, JDK10, JDK11 etc.
-JAVA_VERSION=$(${JAVA} -version 2>&1 | sed -En 's/.* version "([0-9]+).*$/\1/p')
+JAVA_VERSION=$("${JAVA}" -version 2>&1 | sed -En 's/.* version "([0-9]+)\..*" .*/\1/p')
+echo "JAVA_VERSION=$JAVA_VERSION"
 if [ "$JAVA_VERSION" -ge "9" ]; then
     JDK_OPTS="\
         --add-modules java.se \
@@ -52,7 +55,7 @@ if [ "$JAVA_VERSION" -ge "9" ]; then
         --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED \
     "
 
-    VM_NAME=$(${JAVA} -XshowSettings:properties -version 2>&1 | grep java.vm.name | cut -d "=" -f2)
+    VM_NAME=$("${JAVA}" -XshowSettings:properties -version 2>&1 | grep java.vm.name | cut -d "=" -f2)
     if [[ "$VM_NAME" =~ "OpenJ9" ]]; then
         JDK_OPTS="$JDK_OPTS --add-exports jdk.management/com.ibm.lang.management.internal=ALL-UNNAMED"
     fi
