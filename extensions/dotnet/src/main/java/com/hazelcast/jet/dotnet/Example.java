@@ -2,6 +2,7 @@ package com.hazelcast.jet.dotnet;
 
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.internal.util.OsHelper;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -10,23 +11,29 @@ import com.hazelcast.jet.pipeline.Sources;
 
 public class Example {
 
-    // TODO: there should be a way to pass these as arguments
+    // TODO: there should be a way to pass DOTNET_PATH as an argument
 
-    // Windows
-    private static String DOTNET_PATH = "c:\\Users\\sgay\\Code\\hazelcast-csharp-client\\src\\Hazelcast.Net.Jet\\bin\\Release\\net7.0\\win-x64\\publish\\win-x64";
-    private static String DOTNET_EXE = "dotjet.exe";
+    private static String DOTNET_PATH = OsHelper.isWindows()
+            ? "c:\\Users\\sgay\\Code\\hazelcast-csharp-client\\src\\Hazelcast.Net.Jet\\bin\\Release\\net7.0\\win-x64\\publish\\win-x64"
+            : "/home/sgay/shared/dotjet/hazelcast-csharp-client/src/Hazelcast.Net.Jet/bin/Release/net7.0/linux-x64/publish";
 
-    // Linux
-    //private static String DOTNET_PATH = "/home/sgay/shared/dotjet/hazelcast-csharp-client/src/Hazelcast.Net.Jet/bin/Release/net7.0/linux-x64/publish";
-    // private static String DOTNET_EXE = "dotjet";
+    public static void main(String[] args) throws Exception {
 
-    public static void main(String[] args) {
+        if (args.length != 1) {
+            throw new Exception("Missing dotnetPath argument.");
+        }
+
+        String dotnetPath = DOTNET_PATH; //args[0];
+
+        String dotnetExe = OsHelper.isWindows()
+                ? "dotjet.exe"
+                : "dotjet";
 
         // MUST use the Windows directory here, the directory that actually contains our dotnet stuff
         // and, we point to the self-containing exe = 1 file only is needed
         DotnetServiceConfig config = new DotnetServiceConfig()
-                .withDotnetPath(DOTNET_PATH)
-                .withDotnetExe(DOTNET_EXE)
+                .withDotnetPath(dotnetPath)
+                .withDotnetExe(dotnetExe)
                 .withParallelism(4, 4)
                 .withPreserveOrder(true)
                 .withMethodName("doThing");

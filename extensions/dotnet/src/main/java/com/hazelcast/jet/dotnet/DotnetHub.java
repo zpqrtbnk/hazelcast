@@ -85,6 +85,14 @@ public final class DotnetHub {
         DotnetServiceConfig config = serviceContext.getConfig();
         int channelsCount = config.getLocalParallelism() * config.getMaxConcurrentOps();
         Path pipePath = serviceContext.getPipePath();
+
+        // hold on, openAsynchronousChannel already has a retry mechanism, so what?!
+        //boolean success = false;
+        //AsynchronousFileChannel channel;
+        //try {
+        //    channel = openAsynchronousChannel(pipePath);
+        //}
+
         for (int i = 0; i < channelsCount; i++)
             channels.add(openAsynchronousChannel(pipePath)); // FIXME what-if it fails?
 
@@ -129,10 +137,12 @@ public final class DotnetHub {
             catch (FileSystemException fse) {
                 if (retries == 10) {
                     fse.printStackTrace();
+                    throw fse; // rethrow
                 }
+                // else retry
                 channel = null;
                 try {
-                    TimeUnit.MILLISECONDS.sleep(200);
+                    TimeUnit.MILLISECONDS.sleep(1000);
                 }
                 catch (InterruptedException ie) {
                     // ??

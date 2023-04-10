@@ -30,7 +30,9 @@ class DotnetServiceContext {
     }
 
     public Path getPipePath() {
-        return Paths.get((OsHelper.isWindows() ? "\\\\.\\pipe\\" : "") + getPipeName());
+        return Paths.get((OsHelper.isWindows()
+                ? "\\\\.\\pipe\\"
+                : "/tmp/CoreFXPipe_") + getPipeName());
     }
 
     public String getInstanceName() { return getProcessorContext().hazelcastInstance().getName(); }
