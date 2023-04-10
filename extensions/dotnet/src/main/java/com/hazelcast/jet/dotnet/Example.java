@@ -10,23 +10,15 @@ import com.hazelcast.jet.pipeline.Sources;
 
 public class Example {
 
-    private static String DOTNET_PATH = "c:\\Users\\sgay\\Code\\hazelcast-csharp-client\\src\\Hazelcast.Net.Jet\\bin\\Release\\net7.0\\win-x64\\publish\\win-x64";
+    // TODO: there should be a way to pass these as arguments
 
-    // this class needs to be declared as the main-class in the pom.xml file
-    //
-    // ../mvn/apache-maven-3.8.1/bin/mvn package -DskipTests -Dcheckstyle.skip=true
-    // (and with the animal stuff disabled in pom.xml)
-    //
-    // #mkdir distribution/target/bin
-    // #cp distribution/src/bin-*/* distribution/target/bin
-    // #cp distribution/src/root/config/jvm-client.options distribution/target/config # or wherever HOME is?
-    // (cd distribution/target && unzip hazelcast-5.3.0-SNAPSHOT.zip)
-    // PATCH common.sh
-    // alias hz-cli="distribution/target/hazelcast-5.3.0-SNAPSHOT/bin/hz-cli"
-    //
-    // hz-cli -v -t=dev@192.168.1.200:5701 submit java/out/artifacts/tutorial_python/tutorial-python.jar
-    // hz-cli -v -t=dev@127.0.0.1:5701 submit extensions/dotnet/target/hazelcast-jet-dotnet-5.3.0-SNAPSHOT.jar
-    // hz-cli -v -t=dev@127.0.0.1:5701 list-jobs
+    // Windows
+    private static String DOTNET_PATH = "c:\\Users\\sgay\\Code\\hazelcast-csharp-client\\src\\Hazelcast.Net.Jet\\bin\\Release\\net7.0\\win-x64\\publish\\win-x64";
+    private static String DOTNET_EXE = "dotjet.exe";
+
+    // Linux
+    //private static String DOTNET_PATH = "/home/sgay/shared/dotjet/hazelcast-csharp-client/src/Hazelcast.Net.Jet/bin/Release/net7.0/linux-x64/publish";
+    // private static String DOTNET_EXE = "dotjet";
 
     public static void main(String[] args) {
 
@@ -34,7 +26,7 @@ public class Example {
         // and, we point to the self-containing exe = 1 file only is needed
         DotnetServiceConfig config = new DotnetServiceConfig()
                 .withDotnetPath(DOTNET_PATH)
-                .withDotnetExe("dotjet.exe")
+                .withDotnetExe(DOTNET_EXE)
                 .withParallelism(4, 4)
                 .withPreserveOrder(true)
                 .withMethodName("doThing");
