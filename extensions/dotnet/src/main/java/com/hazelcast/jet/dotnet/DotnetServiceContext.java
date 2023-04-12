@@ -26,7 +26,8 @@ class DotnetServiceContext {
 
     public String getPipeName() {
         UUID uuid = processorContext.hazelcastInstance().getLocalEndpoint().getUuid();
-        return config.getPipeName() + "-" + uuid;
+        //return config.getPipeName() + "-" + uuid;
+        return uuid.toString(); // THIS IS V2
     }
 
     public Path getPipePath() {

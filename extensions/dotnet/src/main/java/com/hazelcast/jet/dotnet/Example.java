@@ -9,6 +9,11 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 
+import java.net.StandardProtocolFamily;
+import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.file.Path;
+import java.util.concurrent.Future;
+
 public class Example {
 
     // TODO: there should be a way to pass DOTNET_PATH as an argument
@@ -16,6 +21,15 @@ public class Example {
     private static String DOTNET_PATH = OsHelper.isWindows()
             ? "c:\\Users\\sgay\\Code\\hazelcast-csharp-client\\src\\Hazelcast.Net.Jet\\bin\\Release\\net7.0\\win-x64\\publish\\win-x64"
             : "/home/sgay/shared/dotjet/hazelcast-csharp-client/src/Hazelcast.Net.Jet/bin/Release/net7.0/linux-x64/publish";
+
+    /*
+    public static void main(String[] args) throws Exception {
+        UnixDomainSocketAddress socketAddress = UnixDomainSocketAddress.of(Path.of(""));
+        AsynchronousSocketChannel channel = AsynchronousSocketChannel.open(StandardProtocolFamily.UNIX);
+        Future future = channel.connect(socketAddress);
+        future.get();
+    }
+    */
 
     public static void main(String[] args) throws Exception {
 

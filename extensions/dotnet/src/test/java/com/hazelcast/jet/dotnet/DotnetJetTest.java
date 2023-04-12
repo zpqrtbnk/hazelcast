@@ -95,6 +95,8 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
 
     public void toStringUsing(String methodName) {
 
+        long startTime = System.currentTimeMillis();
+
         List<Integer> items = IntStream
                 .range(0, ITEM_COUNT)
                 .boxed() // convert to Integer instances
@@ -105,6 +107,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
                 .withDotnetExe(dotnetExe)
                 // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
                 .withParallelism(4, 4)
+                //.withParallelism(1, 1) // FIXME best we can do for now
                 .withPreserveOrder(true)
                 .withMethodName(methodName);
 
@@ -116,25 +119,41 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
         p
                 .readFrom(TestSources.items(items)).addTimestamps(x -> 0, 0)
 
-                .apply(DotnetTransforms.<Integer, String>mapAsync(config))
+                .apply(DotnetTransforms.<Integer, String>mapAsync2(config))
                 .setLocalParallelism(config.getLocalParallelism()) // number of processors per member
 
                 .writeTo(AssertionSinks.assertAnyOrder("Fail to get expected items.", expected));
 
         // submit the job & wait for completion
         instance().getJet().newJob(p).join();
+
+        long totalTime = System.currentTimeMillis() - startTime;
+        System.out.println(totalTime);
+    }
+
+    @Test
+    public void doThingUsingJava() {
+
+        doThingUsing("doThingJava");
     }
 
     @Test
     public void doThingUsingDotnet() {
+        doThingUsing("doThing");
+    }
+
+    public void doThingUsing(String methodName) {
+
+        long startTime = System.currentTimeMillis();
 
         DotnetServiceConfig config = new DotnetServiceConfig()
                 .withDotnetPath(dotnetPath)
                 .withDotnetExe(dotnetExe)
                 // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
                 .withParallelism(4, 4)
+                //.withParallelism(1, 1) // FIXME cannot do better for now
                 .withPreserveOrder(true)
-                .withMethodName("doThing");
+                .withMethodName(methodName);
 
         // we're going to work with a map journal source
         // the journal is activated in the member config (see top of this file)
@@ -147,7 +166,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
                 .withIngestionTimestamps()
 
                 // dotnet transform produces an array of objects
-                .apply(DotnetTransforms.mapAsync(config))
+                .apply(DotnetTransforms.mapAsync2(config))
                 .setLocalParallelism(config.getLocalParallelism()) // number of processors per member
 
                 // we know that the objects are [0]:keyData and [1]:valueData
@@ -167,7 +186,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
             status = job.getStatus();
         }
 
-        final int testSize = 8;
+        final int testSize = 64;
 
         // now anytime we add an entry to streamed-map, the job should produce a corresponding entry
         IMap sourceMap = instance().getMap("streamed-map");
@@ -201,6 +220,9 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
         catch (Exception e) {
             Logger.getLogger("TEST").fine(e);
         }
+
+        long totalTime = System.currentTimeMillis() - startTime;
+        System.out.println(totalTime);
     }
 }
 
