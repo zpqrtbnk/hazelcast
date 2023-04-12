@@ -10,14 +10,11 @@ import com.hazelcast.jet.pipeline.test.AssertionSinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.map.IMap;
-import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
@@ -107,7 +104,6 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
                 .withDotnetExe(dotnetExe)
                 // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
                 .withParallelism(4, 4)
-                //.withParallelism(1, 1) // FIXME best we can do for now
                 .withPreserveOrder(true)
                 .withMethodName(methodName);
 
@@ -119,7 +115,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
         p
                 .readFrom(TestSources.items(items)).addTimestamps(x -> 0, 0)
 
-                .apply(DotnetTransforms.<Integer, String>mapAsync2(config))
+                .apply(DotnetTransforms.<Integer, String>mapAsync(config))
                 .setLocalParallelism(config.getLocalParallelism()) // number of processors per member
 
                 .writeTo(AssertionSinks.assertAnyOrder("Fail to get expected items.", expected));
@@ -139,7 +135,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
 
     @Test
     public void doThingUsingDotnet() {
-        doThingUsing("doThing");
+        doThingUsing("doThingDotnet");
     }
 
     public void doThingUsing(String methodName) {
@@ -151,7 +147,6 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
                 .withDotnetExe(dotnetExe)
                 // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
                 .withParallelism(4, 4)
-                //.withParallelism(1, 1) // FIXME cannot do better for now
                 .withPreserveOrder(true)
                 .withMethodName(methodName);
 
@@ -166,7 +161,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
                 .withIngestionTimestamps()
 
                 // dotnet transform produces an array of objects
-                .apply(DotnetTransforms.mapAsync2(config))
+                .apply(DotnetTransforms.mapAsync(config))
                 .setLocalParallelism(config.getLocalParallelism()) // number of processors per member
 
                 // we know that the objects are [0]:keyData and [1]:valueData

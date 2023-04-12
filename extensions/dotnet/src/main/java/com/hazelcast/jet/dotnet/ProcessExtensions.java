@@ -8,22 +8,28 @@ import java.io.InputStreamReader;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+// provides process management methods
 public final class ProcessExtensions {
 
     private ProcessExtensions() { }
 
+    // gets the identifier of a process
     public static String processPid(Process process) {
+
         try {
-            // Process.pid() is @since 9
+            // Process.pid() is available with Java 9
             return Process.class.getMethod("pid").invoke(process).toString();
         } catch (Exception e) {
             return process.toString().replaceFirst("^.*pid=(\\d+).*$", "$1");
         }
     }
 
+    // starts and returns a thread that copies the standard output of a process to a logger
     public static Thread logStdOut(Process process, ILogger logger) {
+
         String processId = processPid(process);
         Thread thread = new Thread(() -> {
+
             try (BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream(), UTF_8))) {
                 for (String line; (line = in.readLine()) != null; ) {
                     logger.fine(line);

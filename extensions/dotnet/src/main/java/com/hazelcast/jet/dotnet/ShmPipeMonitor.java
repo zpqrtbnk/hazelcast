@@ -3,10 +3,10 @@ package com.hazelcast.jet.dotnet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-public class ShmPipe2Monitor {
+public final class ShmPipeMonitor {
 
     private final Thread thread;
-    private final ShmPipe2 pipe;
+    private final ShmPipe pipe;
     private boolean running;
     private CompletableFuture<Void> readFuture;
     private CompletableFuture<Void> writeFuture;
@@ -50,7 +50,9 @@ public class ShmPipe2Monitor {
         }
     }
 
-    public ShmPipe2Monitor(ShmPipe2 pipe) {
+    // initializes a new monitor
+    public ShmPipeMonitor(ShmPipe pipe) {
+
         this.pipe = pipe;
         this.running = true;
 
@@ -59,12 +61,14 @@ public class ShmPipe2Monitor {
     }
 
     public CompletableFuture<Void> waitCanRead() {
+
         if (readFuture != null) return readFuture; // FIXME race! + should NEVER happen
         if (pipe.canRead()) return CompletableFuture.completedFuture(null);
         return readFuture = new CompletableFuture<>();
     }
 
     public CompletableFuture<Void> waitCanWrite(int requiredBytes) {
+
         this.requiredBytes = Math.max(this.requiredBytes, requiredBytes);
         if (writeFuture != null) return writeFuture; // FIXME race! + should NEVER happen
         if (pipe.canWrite(requiredBytes)) return CompletableFuture.completedFuture(null);
@@ -72,6 +76,7 @@ public class ShmPipe2Monitor {
     }
 
     public void destroy() {
+
         running = false;
         try {
             thread.join();

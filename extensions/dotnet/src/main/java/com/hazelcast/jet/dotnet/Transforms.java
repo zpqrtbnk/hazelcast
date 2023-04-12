@@ -3,12 +3,59 @@ package com.hazelcast.jet.dotnet;
 import com.hazelcast.internal.journal.DeserializingEntry;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.impl.HeapData;
+import com.hazelcast.logging.Logger;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 
-public class TransformDoThing2 {
+// provides actual transformations
+public final class Transforms {
 
-    public static <TInput, TResult> CompletableFuture<TResult> mapJavaAsync(TInput input, DotnetServiceContext context) {
+    public static CompletableFuture<String> toStringJava(int input, DotnetServiceContext context) {
+        return CompletableFuture.completedFuture("__" + input + "__");
+    }
+
+    public static CompletableFuture<String> toStringDotnet(int input, DotnetServiceContext context, DotnetHub dotnetHub) {
+
+        try {
+            IJetPipe pipe = dotnetHub.getPipe();
+
+            if (pipe == null) {
+                // FIXME what shall we do if we cannot proceed?
+                context.getLogger().severe("err: no pipe");
+                return CompletableFuture.completedFuture(null);
+            }
+
+            byte[][] buffers = new byte[1][0];
+            buffers[0] = new byte[4];
+            int tmp = input;
+            for (int i = 0; i < 4; i++) {
+                buffers[0][i] = (byte)(tmp & 255);
+                tmp >>= 8;
+            }
+            JetMessage message = new JetMessage(0, buffers);
+            context.getLogger().info("Send " + input);
+
+            return pipe
+                    .write(message)
+                    .thenCompose(x -> pipe.read())
+                    .thenApply(responseMessage -> {
+                        // FIXME maybe then, the message could expose the raw ByteBuffer slices we've received?
+                        String s = StandardCharsets.US_ASCII.decode(ByteBuffer.wrap(responseMessage.getBuffers()[0])).toString();
+                        Logger.getLogger("Transform").info("Received string from dotnet process: " + s);
+                        dotnetHub.returnPipe(pipe);
+                        return s;
+                    });
+        }
+        catch (Exception e) {
+            // FIXME what shall we do if we cannot proceed?
+            e.printStackTrace();
+            return CompletableFuture.completedFuture(null);
+        }
+    }
+
+    public static <TInput, TResult> CompletableFuture<TResult> doThingJava(TInput input, DotnetServiceContext context) {
 
         DeserializingEntry entry = (DeserializingEntry) input;
 
@@ -26,7 +73,7 @@ public class TransformDoThing2 {
         return CompletableFuture.completedFuture((TResult) objects);
     }
 
-    public static <TInput, TResult> CompletableFuture<TResult> mapDotnetAsync(TInput input, DotnetServiceContext context, DotnetHub2 dotnetHub) {
+    public static <TInput, TResult> CompletableFuture<TResult> doThingDotnet(TInput input, DotnetServiceContext context, DotnetHub dotnetHub) {
 
         try {
             IJetPipe pipe = dotnetHub.getPipe();

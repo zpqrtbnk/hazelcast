@@ -13,9 +13,11 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-public class ShmPipe2 implements IJetPipe {
+// represents a shared memory based pipe
+public final class ShmPipe implements IJetPipe {
+
     private final int SizeOfInt = Integer.BYTES;
-    private final ShmPipe2Monitor monitor;
+    private final ShmPipeMonitor monitor;
 
     private final int outWpOffset;
     private final int outRpOffset;
@@ -36,17 +38,18 @@ public class ShmPipe2 implements IJetPipe {
 
     private int inrp, outwp;
 
-    public ShmPipe2(boolean isOwner) throws IOException, IllegalArgumentException {
+    public ShmPipe(boolean isOwner) throws IOException, IllegalArgumentException {
+
         this(isOwner, null, null, 1024, 500);
     }
 
-    public ShmPipe2(boolean isOwner, String filename, String uid, int dataCapacity, int spinDelayMilliseconds) throws IOException, IllegalArgumentException {
+    public ShmPipe(boolean isOwner, String filename, String uid, int dataCapacity, int spinDelayMilliseconds) throws IOException, IllegalArgumentException {
 
         if (isOwner) throw new IllegalArgumentException("Owner mode not supported.");
 
         this.capacity = dataCapacity;
         this.spinDelay = spinDelayMilliseconds;
-        this.monitor = new ShmPipe2Monitor(this);
+        this.monitor = new ShmPipeMonitor(this);
 
         // total size
         int size = 4 * SizeOfInt + 2 * dataCapacity;
@@ -97,19 +100,30 @@ public class ShmPipe2 implements IJetPipe {
         }
     }
 
-    public String getUid() { return uid; }
+    public String getUid() {
+
+        return uid;
+    }
+
     public Path getFilename() {
+
         return filename;
     }
 
     public int getCapacity() {
+
         return capacity;
     }
 
-    public int getSpinDelay() { return spinDelay; }
+    public int getSpinDelay() {
+
+        return spinDelay;
+    }
 
     public void destroy() {
+
         // TODO: we probably MUST destroy the map buffer, close the file, etc.
+        monitor.destroy();
     }
 
     private Void writeImmediately(JetMessage message) {
@@ -179,8 +193,8 @@ public class ShmPipe2 implements IJetPipe {
                 .thenApply(x -> readImmediately());
     }
 
-    public boolean canWrite(int requiredBytes)
-    {
+    public boolean canWrite(int requiredBytes) {
+
         // read the read pointer
         int outrp = mapBuffer.getInt(outRpOffset);
 
@@ -193,20 +207,20 @@ public class ShmPipe2 implements IJetPipe {
         return freeBytes >= requiredBytes + 1; // 1-byte gap
     }
 
-    private void write(byte[] buffer, int outrp)
-    {
+    private void write(byte[] buffer, int outrp) {
+
         writeInteger(buffer.length, outrp);
         if (buffer.length > 0) writeBytes(buffer, outrp);
     }
 
-    private void writeInteger(int value, int outrp)
-    {
+    private void writeInteger(int value, int outrp) {
+
         for (int i = 0; i < 4; i++) { ibuffer[i] = (byte) (value & 255); value >>= 8; }
         writeBytes(ibuffer, outrp);
     }
 
-    private void writeBytes(byte[] buffer, int outrp)
-    {
+    private void writeBytes(byte[] buffer, int outrp) {
+
         int destination = outDataOffset + outwp;
         int limit = outwp >= outrp ? capacity : outrp;
         int length = Math.min(buffer.length, limit - outwp);
@@ -226,31 +240,31 @@ public class ShmPipe2 implements IJetPipe {
         ((ByteBuffer)mapBuffer.duplicate().position(destination)).put(buffer, length, length2);
     }
 
-    public boolean canRead()
-    {
+    public boolean canRead() {
+
         // read the write pointer
         int inwp = mapBuffer.getInt(inWpOffset);
         return inwp != inrp;
     }
 
-    private byte[] read(int inwp)
-    {
+    private byte[] read(int inwp) {
+
         int bufferLength = readInteger(inwp);
         byte[] buffer = new byte[bufferLength];
         if (bufferLength > 0) readBytes(buffer, inwp);
         return buffer;
     }
 
-    private int readInteger(int inwp)
-    {
+    private int readInteger(int inwp) {
+
         readBytes(ibuffer, inwp);
         int value = 0;
         for (int i = 0; i < 4; i++) value += ibuffer[i] << (i * 8);
         return value;
     }
 
-    private void readBytes(byte[] buffer, int inwp)
-    {
+    private void readBytes(byte[] buffer, int inwp) {
+
         int source = inDataOffset + inrp;
         int limit = inwp >= inrp ? inwp : capacity;
         int length = Math.min(buffer.length, limit - inrp);
@@ -269,10 +283,12 @@ public class ShmPipe2 implements IJetPipe {
     }
 
     private int getInt(int offset) {
+
         return mapBuffer.getInt(offset);
     }
 
     private void setInt(int offset, int value) {
+
         mapBuffer.putInt(offset, value);
     }
 }

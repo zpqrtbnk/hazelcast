@@ -2,69 +2,78 @@ package com.hazelcast.jet.dotnet;
 
 import com.hazelcast.logging.ILogger;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.channels.AsynchronousFileChannel;
-import java.nio.file.*;
-import java.util.HashMap;
-import java.util.Map;
+import java.nio.file.Paths;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.TimeUnit;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.lang.Thread.currentThread;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
+// represents the dotnet hub
 public final class DotnetHub {
 
+    private final int DATA_CAPACITY = 1024; // bytes
+    private final int SPIN_DELAY = 4; // milliseconds
+    private final int PROCESS_DEATH_TIMEOUT = 2; // seconds
+
     private final DotnetServiceContext serviceContext;
-    private final Queue<AsynchronousFileChannel> channels;
+    private final DotnetServiceConfig config;
+    private final Queue<IJetPipe> pipes;
+
     private final ILogger logger;
     private Process dotnetProcess;
     private String dotnetProcessId;
     private Thread stdoutLoggingThread;
 
-    DotnetHub (DotnetServiceContext serviceContext) {
+    // initializes a new dotnet hub
+    public DotnetHub(DotnetServiceContext serviceContext) throws IOException {
+
         this.serviceContext = serviceContext;
-        this.channels = new ConcurrentLinkedQueue<>();
+        this.config = serviceContext.getConfig();
         this.logger = serviceContext.getLogger();
 
-        String instanceName = serviceContext.getInstanceName();
-        serviceContext.getLogger().info("Created dotnet hub for " + instanceName);
-        try {
-            startProcess();
-            openChannels();
-        }
-        catch (Exception e) {
-            serviceContext.getLogger().severe(e);
-            // FIXME and then what?
-        }
-    }
-
-    public void destroy() {
-        stopProcess();
-    }
-
-    public AsynchronousFileChannel getChannel() {
-        AsynchronousFileChannel channel = channels.poll();
-        serviceContext.getLogger().fine("Get channel... " + (channel == null ? "null!" : ""));
-        return channel; // FIXME what-if it's null?
-    }
-
-    public void returnChannel(AsynchronousFileChannel channel) {
-        serviceContext.getLogger().fine("Return channel...");
-        if (channel != null) channels.add(channel);
-    }
-
-    private void startProcess() throws IOException {
-        DotnetServiceConfig config = serviceContext.getConfig();
         String pipeName = serviceContext.getPipeName();
         String methodName = config.getMethodName();
+        String instanceName = serviceContext.getInstanceName();
+
+        logger.info("DotnetHub starting, running " + methodName + " for " + instanceName + " over " + pipeName);
+
+        pipes = new ConcurrentLinkedQueue<>();
+
+        startProcess();
+        openPipes();
+    }
+
+    // open the pipes
+    private void openPipes() throws IOException {
+
+        int pipesCount = config.getLocalParallelism() * config.getMaxConcurrentOps();
+        String pipeName = serviceContext.getPipeName();
+
+        for (int i = 0; i < pipesCount; i++)
+            pipes.add(new ShmPipe(false, null, pipeName + "-" + i, DATA_CAPACITY, SPIN_DELAY));
+
+        logger.info("DotnetHub [" + dotnetProcessId + "] opened " + pipes.size() + " pipes");
+    }
+
+    // start the dotnet process
+    private void startProcess() throws IOException {
+
+        String pipeName = serviceContext.getPipeName();
+        String methodName = config.getMethodName();
+        String instanceName = serviceContext.getInstanceName();
+
+        // the process accepts three parameters
+        // - the pipe name base i.e. <guid>
+        // - the number of pipes
+        // - the name of the method to execute
 
         String dotnetExe = config.getDotnetPath() + File.separator + config.getDotnetExe();
-        int channelsCount = config.getLocalParallelism() * config.getMaxConcurrentOps();
-        ProcessBuilder builder = new ProcessBuilder(dotnetExe, pipeName, Integer.toString(channelsCount), methodName);
+        int pipesCount = config.getLocalParallelism() * config.getMaxConcurrentOps();
+        ProcessBuilder builder = new ProcessBuilder(dotnetExe, pipeName, Integer.toString(pipesCount), methodName);
+
         dotnetProcess = builder
                 .directory(Paths.get(config.getDotnetPath()).toFile())
                 .redirectErrorStream(true)
@@ -72,90 +81,86 @@ public final class DotnetHub {
 
         dotnetProcessId = ProcessExtensions.processPid(dotnetProcess);
         stdoutLoggingThread = ProcessExtensions.logStdOut(dotnetProcess, logger);
-        logger.info("Started dotnet hub [" + dotnetProcessId + ":" + methodName + "] for " + serviceContext.getInstanceName() + " at " + pipeName);
+        logger.info("DotnetHub [" + dotnetProcessId + "] started, running " + methodName + " for " + instanceName + " over " + pipeName);
     }
 
-    private void openChannels() throws IOException {
-
-        // TODO: we need to wait for the process to be ready = retry
-
-        DotnetServiceConfig config = serviceContext.getConfig();
-        int channelsCount = config.getLocalParallelism() * config.getMaxConcurrentOps();
-        Path pipePath = serviceContext.getPipePath();
-
-        // hold on, openAsynchronousChannel already has a retry mechanism, so what?!
-        //boolean success = false;
-        //AsynchronousFileChannel channel;
-        //try {
-        //    channel = openAsynchronousChannel(pipePath);
-        //}
-        int waitCount = 0;
-        while (!Files.exists(pipePath)) {
-            try {
-                TimeUnit.MILLISECONDS.sleep(1000);
-            }
-            catch (InterruptedException ie) {
-                // ??
-            }
-            if (waitCount++ == 10) throw new FileSystemException("Channel not found " + pipePath);
-        }
-
-        for (int i = 0; i < channelsCount; i++)
-            channels.add(openAsynchronousChannel(pipePath)); // FIXME what-if it fails?
-
-        logger.info("Opened " + channels.size() + " channels to hub for " + serviceContext.getInstanceName() + " at " + serviceContext.getPipeName());
-    }
-
+    // stops the dotnet process
     private void stopProcess() {
 
-        // TODO: monitor that the process exits, else force-kill it
-        String instanceName = serviceContext.getInstanceName();
-        logger.info("Stopping dotnet hub [" + dotnetProcessId + "] for " + instanceName + " at " + serviceContext.getPipeName());
+        logger.info("DotnetHub `[" + dotnetProcessId + "]` stopping");
+
+        // try to send the kiss-of-death to the process, so it stops by itself
         try {
-            AsynchronousFileChannel channel = channels.poll();
-            if (channel != null) {
-                ChannelExtensions.writeInteger(channel, -1);
-                logger.fine("Hub sent signal of death to dotnet process");
+            IJetPipe pipe = pipes.poll();
+            if (pipe != null) {
+                pipe.write(JetMessage.KissOfDeath);
+                logger.fine("DotnetHub [" + dotnetProcessId + "] sent kiss-of-death to dotnet process");
             }
             else {
-                logger.fine("Could not send signal of death to dotnet process");
+                logger.fine("DotnetHub [" + dotnetProcessId + "] could not send kiss-of-death to dotnet process");
             }
         }
         catch (Exception e) {
-            logger.warning(e);
+            logger.warning("DotnetHub [" + dotnetProcessId + "] failed to send kiss-of-death to dotnet process", e);
         }
 
-        // TODO: see python code, here we expect the process to terminate nicely
-        // but if we cannot get a channel or for other reasons, we might have to kill it?
+        // keep track of thread interruptions that we are going to catch
+        boolean interrupted = false;
 
-        try { // TODO: do better
-            stdoutLoggingThread.join();
+        // give the process some time to stop, then kill it
+        while (true) {
+            try {
+                if (dotnetProcess.waitFor(PROCESS_DEATH_TIMEOUT, SECONDS)) {
+                    break;
+                }
+            } catch (InterruptedException e) {
+                logger.info("DotnetHub [" + dotnetProcessId + "] ignoring interruption signal in order to prevent process leak");
+                interrupted = true;
+            }
+            logger.warning("DotnetHub [" + dotnetProcessId + "] still running after " + PROCESS_DEATH_TIMEOUT + "s, kill");
+            dotnetProcess.destroyForcibly();
         }
-        catch (Exception e) { }
+
+        // join the logging thread
+        while (true) {
+            try {
+                stdoutLoggingThread.join();
+                break;
+            } catch (InterruptedException e) {
+                logger.info("DotnetHub [" + dotnetProcessId + "] ignoring interruption signal in order to prevent " + stdoutLoggingThread.getName() + " thread leak");
+                interrupted = true;
+            } catch (Exception e) {
+                logger.warning("DotnetHub [" + dotnetProcessId + "] " + stdoutLoggingThread.getName() + " thread has completed with an exception", e);
+            }
+        }
+
+        // if we have caught an interrupt, interrupt
+        if (interrupted) {
+            currentThread().interrupt();
+        }
     }
 
-    private AsynchronousFileChannel openAsynchronousChannel(Path pipePath) throws IOException {
-        AsynchronousFileChannel channel = null;
-        int retries = 0; // TODO: timeout and number of retries should be options
-        while (channel == null && retries++ < 10) {
-            try {
-                channel = AsynchronousFileChannel.open(pipePath, StandardOpenOption.READ, StandardOpenOption.WRITE);
-            }
-            catch (FileSystemException fse) {
-                if (retries == 10) {
-                    fse.printStackTrace();
-                    throw fse; // rethrow
-                }
-                // else retry
-                channel = null;
-                try {
-                    TimeUnit.MILLISECONDS.sleep(1000);
-                }
-                catch (InterruptedException ie) {
-                    // ??
-                }
-            }
+    // destroys the dotnet hub
+    public void destroy() {
+
+        stopProcess();
+
+        IJetPipe pipe;
+        while ((pipe = pipes.poll()) != null) {
+
+            pipe.destroy();
         }
-        return channel;
+    }
+
+    // get a pipe from the hub
+    public IJetPipe getPipe() {
+
+        // FIXME what-if it's null?
+        return pipes.poll();
+    }
+
+    // return a pipe to the hub
+    public void returnPipe(IJetPipe pipe) {
+        if (pipe != null) pipes.add(pipe);
     }
 }

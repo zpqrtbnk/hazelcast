@@ -9,11 +9,6 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 
-import java.net.StandardProtocolFamily;
-import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.file.Path;
-import java.util.concurrent.Future;
-
 public class Example {
 
     // TODO: there should be a way to pass DOTNET_PATH as an argument
