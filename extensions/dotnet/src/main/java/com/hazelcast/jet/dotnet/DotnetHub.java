@@ -94,6 +94,7 @@ public final class DotnetHub {
 
         // keep track of thread interruptions that we are going to catch
         boolean interrupted = false;
+        boolean destroyed = false;
 
         // give the process some time to stop, then kill it
         while (true) {
@@ -106,7 +107,13 @@ public final class DotnetHub {
                 interrupted = true;
             }
             logger.warning("DotnetHub [" + dotnetProcessId + "] still running after " + PROCESS_DEATH_TIMEOUT + "s, kill");
-            dotnetProcess.destroyForcibly();
+            if (destroyed) {
+                dotnetProcess.destroyForcibly(); // SIGKILL
+            }
+            else {
+                dotnetProcess.destroy(); // SIGTERM
+                destroyed = true;
+            }
         }
 
         // join the logging thread
