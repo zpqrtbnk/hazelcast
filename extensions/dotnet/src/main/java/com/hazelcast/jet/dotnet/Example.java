@@ -28,11 +28,14 @@ public class Example {
 
     public static void main(String[] args) throws Exception {
 
-        if (args.length != 1) {
-            throw new Exception("Missing dotnetPath argument.");
-        }
+        // future: specify the dotnet path as an argument
+        //if (args.length != 1) {
+        //    throw new Exception("Missing dotnetPath argument.");
+        //}
+        //
+        // String dotnetPath = args[0];
 
-        String dotnetPath = DOTNET_PATH; //args[0];
+        String dotnetPath = DOTNET_PATH;
 
         String dotnetExe = OsHelper.isWindows()
                 ? "dotjet.exe"
@@ -45,7 +48,7 @@ public class Example {
                 .withDotnetExe(dotnetExe)
                 .withParallelism(4, 4)
                 .withPreserveOrder(true)
-                .withMethodName("doThing");
+                .withMethodName("doThingDotnet");
 
         Pipeline pipeline = Pipeline.create();
         pipeline

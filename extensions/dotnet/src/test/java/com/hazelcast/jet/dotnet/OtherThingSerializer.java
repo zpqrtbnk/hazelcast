@@ -11,12 +11,17 @@ public class OtherThingSerializer implements CompactSerializer<OtherThing> {
     @Nonnull
     @Override
     public OtherThing read(@Nonnull CompactReader reader) {
-        return new OtherThing();
+
+
+        OtherThing object = new OtherThing();
+        object.setValue(reader.readString("value"));
+        return object;
     }
 
     @Override
     public void write(@Nonnull CompactWriter writer, @Nonnull OtherThing object) {
 
+        writer.writeString("value", object.getValue());
     }
 
     @Nonnull

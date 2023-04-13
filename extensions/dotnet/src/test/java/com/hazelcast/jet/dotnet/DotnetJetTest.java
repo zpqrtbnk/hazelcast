@@ -2,6 +2,8 @@ package com.hazelcast.jet.dotnet;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.MapConfig;
+import com.hazelcast.internal.journal.DeserializingEntry;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.core.JobStatus;
@@ -15,6 +17,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
@@ -57,12 +62,15 @@ import static java.util.stream.Collectors.toList;
  */
 public class DotnetJetTest extends SimpleTestInClusterSupport {
 
-    private static final int ITEM_COUNT = 10_000;
-    private static final String dotnetPath = "c:\\Users\\sgay\\Code\\hazelcast-csharp-client\\src\\Hazelcast.Net.Jet";
-    //private static final String dotnetPath = "c:\\Users\\sgay\\Code\\dotnet-jet\\dotnet-svr";
-    private static final String dotnetExe = "bin\\Debug\\net7.0\\win-x64\\dotjet.exe"; // normal exe
-    //private static final String dotnetExe = "bin\\debug\\net7.0\\win-x64\\dotnet-svr.exe"; // normal exe
-    //private static final String dotnetExe = "bin\\Release\\net7.0\\win-x64\\publish\\win-x64\\dotnet-svr.exe"; // self-contained
+    private static final int ITEM_COUNT = 10_000; // for strings
+    private static final int THINGS_COUNT = 10_000; // for things
+
+    public static final String dotnetConfiguration = "Release"; // Release | Debug
+    private static final String dotnetPath =
+            "c:\\Users\\sgay\\Code\\hazelcast-csharp-client\\src\\Hazelcast.Net.Jet"
+            + "\\bin\\" + dotnetConfiguration + "\\net7.0\\win-x64" // normal exe
+            + "\\publish"; // standalone executable (self-contained)
+    private static final String dotnetExe = "dotjet.exe";
 
     @BeforeClass
     public static void beforeClass() {
@@ -181,20 +189,22 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
             status = job.getStatus();
         }
 
-        final int testSize = 64;
-
         // now anytime we add an entry to streamed-map, the job should produce a corresponding entry
         IMap sourceMap = instance().getMap("streamed-map");
         Logger.getLogger("TEST").info("set values in map...");
         sourceMap.clear();
-        for (int i = 0; i < testSize; i++)
-            sourceMap.set("thing-" + i, new SomeThing());
+        for (int i = 0; i < THINGS_COUNT; i++)
+        {
+            SomeThing thing = new SomeThing();
+            thing.setValue(i);
+            sourceMap.set("thing-" + i, thing);
+        }
         Logger.getLogger("TEST").info("done setting values in map...");
 
         // wait, the result map is going to be populated by the job
         IMap resultMap = instance().getMap("result-map");
         int timeoutSeconds = 30;
-        while (resultMap.size() < testSize && --timeoutSeconds > 0)
+        while (resultMap.size() < THINGS_COUNT && --timeoutSeconds > 0)
             try { Thread.sleep(1_000); } catch (InterruptedException e) { }
 
         Assert.assertNotEquals(0, timeoutSeconds);
@@ -205,6 +215,183 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
         // serialized (so, no duplicate serialization either).
         //
         // is this linked to how entries are kept BINARY vs OBJECT?
+
+        // streaming jobs run until canceled, and then they end up in a failed state
+        // try/catch the join 'cos cancellation is an exception, apparently
+        job.cancel();
+        try {
+            job.join();
+        }
+        catch (Exception e) {
+            Logger.getLogger("TEST").fine(e);
+        }
+
+        long totalTime = System.currentTimeMillis() - startTime;
+        System.out.println(totalTime);
+    }
+
+    @Test
+    public void doThingUsingDotnet2() {
+
+        long startTime = System.currentTimeMillis();
+
+        DotnetServiceConfig config = new DotnetServiceConfig()
+                .withDotnetPath(dotnetPath)
+                .withDotnetExe(dotnetExe)
+                // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
+                .withParallelism(4, 4)
+                .withPreserveOrder(true)
+                .withMethodName("doThingDotnet");
+
+        // we're going to work with a map journal source
+        // the journal is activated in the member config (see top of this file)
+
+        // compose the pipeline
+        Pipeline p = Pipeline.create();
+        p
+                // source stage produces Entry<...> open generics
+                .readFrom(Sources.mapJournal("streamed-map", JournalInitialPosition.START_FROM_CURRENT))
+                .withIngestionTimestamps()
+
+                // dotnet transforms Data[] to Data[]
+                .apply(DotnetTransforms.mapRawAsync((service, input) -> {
+                    DeserializingEntry entry = (DeserializingEntry) input;
+                    Data[] rawInput = new Data[2];
+                    rawInput[0] = entry.getDataKey();
+                    rawInput[1] = entry.getDataValue();
+                    return service.mapRawAsync(rawInput);
+                }, config))
+                .setLocalParallelism(config.getLocalParallelism()) // number of processors per member
+
+                // we know that the returned objects are [0]:keyData and [1]:valueData
+                .writeTo(Sinks.map("result-map", x -> ((Data[])x)[0], x -> ((Data[])x)[1]));
+
+        // submit the job
+        Job job = instance().getJet().newJob(p);
+
+        // wait for the job to be actually running
+        // else, whatever we put in the map will not be processed (?)
+        JobStatus status = job.getStatus();
+        while (status != JobStatus.RUNNING) {
+            try { Thread.sleep(1_000); } catch (InterruptedException e) { }
+            status = job.getStatus();
+        }
+
+        // now anytime we add an entry to streamed-map, the job should produce a corresponding entry
+        IMap sourceMap = instance().getMap("streamed-map");
+        Logger.getLogger("TEST").info("set values in map...");
+        sourceMap.clear();
+        for (int i = 0; i < THINGS_COUNT; i++)
+        {
+            SomeThing thing = new SomeThing();
+            thing.setValue(i);
+            sourceMap.set("thing-" + i, thing);
+        }
+        Logger.getLogger("TEST").info("done setting values in map...");
+
+        // wait, the result map is going to be populated by the job
+        IMap resultMap = instance().getMap("result-map");
+        int timeoutSeconds = 30;
+        while (resultMap.size() < THINGS_COUNT && --timeoutSeconds > 0)
+            try { Thread.sleep(1_000); } catch (InterruptedException e) { }
+
+        Assert.assertNotEquals(0, timeoutSeconds);
+
+        // this fails, because we don't have the schema for OtherThing
+        resultMap.put("dummy", new OtherThing()); // unless we force the schema to exist
+        Set<Map.Entry<String, OtherThing>> results = resultMap.entrySet();
+        for (Map.Entry<String, OtherThing> entry : results)
+            System.out.println(">> " + entry.getKey() + ": " + entry.getValue());
+
+        // streaming jobs run until canceled, and then they end up in a failed state
+        // try/catch the join 'cos cancellation is an exception, apparently
+        job.cancel();
+        try {
+            job.join();
+        }
+        catch (Exception e) {
+            Logger.getLogger("TEST").fine(e);
+        }
+
+        long totalTime = System.currentTimeMillis() - startTime;
+        System.out.println(totalTime);
+    }
+
+    @Test
+    public void doThingUsingJava2() {
+
+        long startTime = System.currentTimeMillis();
+
+        DotnetServiceConfig config = new DotnetServiceConfig()
+                .withDotnetPath(dotnetPath)
+                .withDotnetExe(dotnetExe)
+                // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
+                .withParallelism(4, 4)
+                .withPreserveOrder(true)
+                .withMethodName("doThingDotnet");
+
+        // we're going to work with a map journal source
+        // the journal is activated in the member config (see top of this file)
+
+        // compose the pipeline
+        Pipeline p = Pipeline.create();
+        p
+                // source stage produces Entry<...> open generics
+                .readFrom(Sources.mapJournal("streamed-map", JournalInitialPosition.START_FROM_CURRENT))
+                .withIngestionTimestamps()
+
+                // dotnet transforms Data[] to Data[]
+                .apply(DotnetTransforms.mapRawAsync((service, input) -> {
+                    DeserializingEntry entry = (DeserializingEntry) input;
+                    SomeThing someThing = (SomeThing) entry.getValue();
+                    Object[] output = new Object[2];
+                    output[0] = entry.getDataKey();
+                    OtherThing otherThing = new OtherThing();
+                    otherThing.setValue("__" + someThing.getValue() + "__");
+                    output[1] = otherThing;
+                    return CompletableFuture.completedFuture(output);
+                }, config))
+                .setLocalParallelism(config.getLocalParallelism()) // number of processors per member
+
+                // we know that the returned objects are [0]:keyData and [1]:valueData
+                .writeTo(Sinks.map("result-map", x -> ((Object[])x)[0], x -> ((Object[])x)[1]));
+
+        // submit the job
+        Job job = instance().getJet().newJob(p);
+
+        // wait for the job to be actually running
+        // else, whatever we put in the map will not be processed (?)
+        JobStatus status = job.getStatus();
+        while (status != JobStatus.RUNNING) {
+            try { Thread.sleep(1_000); } catch (InterruptedException e) { }
+            status = job.getStatus();
+        }
+
+        // now anytime we add an entry to streamed-map, the job should produce a corresponding entry
+        IMap sourceMap = instance().getMap("streamed-map");
+        Logger.getLogger("TEST").info("set values in map...");
+        sourceMap.clear();
+        for (int i = 0; i < THINGS_COUNT; i++)
+        {
+            SomeThing thing = new SomeThing();
+            thing.setValue(i);
+            sourceMap.set("thing-" + i, thing);
+        }
+        Logger.getLogger("TEST").info("done setting values in map...");
+
+        // wait, the result map is going to be populated by the job
+        IMap resultMap = instance().getMap("result-map");
+        int timeoutSeconds = 30;
+        while (resultMap.size() < THINGS_COUNT && --timeoutSeconds > 0)
+            try { Thread.sleep(1_000); } catch (InterruptedException e) { }
+
+        Assert.assertNotEquals(0, timeoutSeconds);
+
+        // this fails, because we don't have the schema for OtherThing
+        resultMap.put("dummy", new OtherThing()); // unless we force the schema to exist
+        Set<Map.Entry<String, OtherThing>> results = resultMap.entrySet();
+        for (Map.Entry<String, OtherThing> entry : results)
+            System.out.println(">> " + entry.getKey() + ": " + entry.getValue());
 
         // streaming jobs run until canceled, and then they end up in a failed state
         // try/catch the join 'cos cancellation is an exception, apparently

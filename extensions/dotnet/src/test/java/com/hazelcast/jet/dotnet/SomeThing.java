@@ -7,5 +7,22 @@ import com.hazelcast.nio.serialization.compact.CompactWriter;
 import javax.annotation.Nonnull;
 
 public class SomeThing {
+
+    private int value;
+
+    public void setValue(int value) {
+
+        this.value = value;
+    }
+
+    public int getValue() {
+
+        return this.value;
+    }
+
+    @Override
+    public String toString() {
+        return "SomeThing(Value=" + value + ")";
+    }
 }
 

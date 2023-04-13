@@ -43,19 +43,7 @@ public final class DotnetHub {
         pipes = new ConcurrentLinkedQueue<>();
 
         startProcess();
-        openPipes();
-    }
-
-    // open the pipes
-    private void openPipes() throws IOException {
-
-        int pipesCount = config.getLocalParallelism() * config.getMaxConcurrentOps();
-        String pipeName = serviceContext.getPipeName();
-
-        for (int i = 0; i < pipesCount; i++)
-            pipes.add(new ShmPipe(false, null, pipeName + "-" + i, DATA_CAPACITY, SPIN_DELAY));
-
-        logger.info("DotnetHub [" + dotnetProcessId + "] opened " + pipes.size() + " pipes");
+        openPipes(); // FIXME is this fails, need to stop the process!
     }
 
     // start the dotnet process
@@ -150,6 +138,18 @@ public final class DotnetHub {
 
             pipe.destroy();
         }
+    }
+
+    // open the pipes
+    private void openPipes() throws IOException {
+
+        int pipesCount = config.getLocalParallelism() * config.getMaxConcurrentOps();
+        String pipeName = serviceContext.getPipeName();
+
+        for (int i = 0; i < pipesCount; i++)
+            pipes.add(new ShmPipe(false, null, pipeName + "-" + i, DATA_CAPACITY, SPIN_DELAY));
+
+        logger.info("DotnetHub [" + dotnetProcessId + "] opened " + pipes.size() + " pipes");
     }
 
     // get a pipe from the hub
