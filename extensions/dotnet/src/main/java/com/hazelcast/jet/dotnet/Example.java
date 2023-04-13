@@ -13,18 +13,16 @@ public class Example {
 
     // TODO: there should be a way to pass DOTNET_PATH as an argument
 
-    private static String DOTNET_PATH = OsHelper.isWindows()
-            ? "c:\\Users\\sgay\\Code\\hazelcast-csharp-client\\src\\Hazelcast.Net.Jet\\bin\\Release\\net7.0\\win-x64\\publish\\win-x64"
-            : "/home/sgay/shared/dotjet/hazelcast-csharp-client/src/Hazelcast.Net.Jet/bin/Release/net7.0/linux-x64/publish";
+    public static final String dotnetConfiguration = "Release"; // Release | Debug
 
-    /*
-    public static void main(String[] args) throws Exception {
-        UnixDomainSocketAddress socketAddress = UnixDomainSocketAddress.of(Path.of(""));
-        AsynchronousSocketChannel channel = AsynchronousSocketChannel.open(StandardProtocolFamily.UNIX);
-        Future future = channel.connect(socketAddress);
-        future.get();
-    }
-    */
+    // add \\publish or /publish directory at the end of the path to use the standalone executable (self-contained)
+    private final static String dotnetPath = OsHelper.isWindows()
+            ? "c:\\Users\\sgay\\Code\\hazelcast-csharp-client\\src\\Hazelcast.Net.Jet\\bin\\" + dotnetConfiguration + "\\net7.0\\win-x64"
+            : "/home/sgay/shared/dotjet/hazelcast-csharp-client/src/Hazelcast.Net.Jet/bin/" + dotnetConfiguration + "/net7.0/linux-x64";
+
+    private final static String dotnetExe = OsHelper.isWindows()
+            ? "dotjet.exe"
+            : "dotjet";
 
     public static void main(String[] args) throws Exception {
 
@@ -34,12 +32,6 @@ public class Example {
         //}
         //
         // String dotnetPath = args[0];
-
-        String dotnetPath = DOTNET_PATH;
-
-        String dotnetExe = OsHelper.isWindows()
-                ? "dotjet.exe"
-                : "dotjet";
 
         // MUST use the Windows directory here, the directory that actually contains our dotnet stuff
         // and, we point to the self-containing exe = 1 file only is needed

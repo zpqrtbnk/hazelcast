@@ -4,6 +4,7 @@ import com.hazelcast.config.Config;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.internal.journal.DeserializingEntry;
 import com.hazelcast.internal.serialization.Data;
+import com.hazelcast.internal.util.OsHelper;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.core.JobStatus;
@@ -66,11 +67,15 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
     private static final int THINGS_COUNT = 10_000; // for things
 
     public static final String dotnetConfiguration = "Release"; // Release | Debug
-    private static final String dotnetPath =
-            "c:\\Users\\sgay\\Code\\hazelcast-csharp-client\\src\\Hazelcast.Net.Jet"
-            + "\\bin\\" + dotnetConfiguration + "\\net7.0\\win-x64" // normal exe
-            + "\\publish"; // standalone executable (self-contained)
-    private static final String dotnetExe = "dotjet.exe";
+
+    // add \\publish or /publish directory at the end of the path to use the standalone executable (self-contained)
+    private final static String dotnetPath = OsHelper.isWindows()
+            ? "c:\\Users\\sgay\\Code\\hazelcast-csharp-client\\src\\Hazelcast.Net.Jet\\bin\\" + dotnetConfiguration + "\\net7.0\\win-x64"
+            : "/home/sgay/shared/dotjet/hazelcast-csharp-client/src/Hazelcast.Net.Jet/bin/" + dotnetConfiguration + "/net7.0/linux-x64";
+
+    private final static String dotnetExe = OsHelper.isWindows()
+            ? "dotjet.exe"
+            : "dotjet";
 
     @BeforeClass
     public static void beforeClass() {
