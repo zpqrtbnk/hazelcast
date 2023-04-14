@@ -65,6 +65,15 @@ if [ "${HAZELCAST_CONFIG:0:1}" != "/" ]; then
   HAZELCAST_CONFIG="$HAZELCAST_HOME/$HAZELCAST_CONFIG"
 fi
 
+JET_CUSTOM_LIB_DIR="$HAZELCAST_HOME/custom-lib"
+
+# ensure windows style on Windows
+if [ -n "${CYGPATH}" ]; then
+  HAZELCAST_CONFIG=$(cygpath -w -p "$HAZELCAST_CONFIG")
+  JET_CUSTOM_LIB_DIR=$(cygpath -w -p "$JET_CUSTOM_LIB_DIR")
+  LOGGING_CONFIG=$(cygpath -w -p "$LOGGING_CONFIG")
+fi
+
 if [ "${PROMETHEUS_PORT}" ]; then
     echo "Prometheus enabled on port ${PROMETHEUS_PORT}"
     PROMETHEUS="-javaagent:${HAZELCAST_HOME}/lib/jmx_prometheus_javaagent-${prometheus.version}.jar=${PROMETHEUS_PORT}:${HAZELCAST_HOME}/config/jmx_agent_config.yaml"
@@ -82,7 +91,7 @@ $JDK_OPTS \
 "-Dhazelcast.logging.type=log4j2" \
 "-Dlog4j.configurationFile=$LOGGING_CONFIG" \
 "-Dhazelcast.config=$HAZELCAST_CONFIG" \
-"-Djet.custom.lib.dir=$HAZELCAST_HOME/custom-lib" \
+"-Djet.custom.lib.dir=$JET_CUSTOM_LIB_DIR" \
 $PROMETHEUS \
 $LICENSING_OPT\
 $JVM_OPTIONS \

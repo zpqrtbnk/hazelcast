@@ -10,11 +10,13 @@ public final class DotnetServiceContext {
 
     private final ProcessorSupplier.Context processorContext;
     private final DotnetServiceConfig config;
+    private final ILogger logger;
 
     // initializes the dotnet service context
     DotnetServiceContext(ProcessorSupplier.Context processorContext, DotnetServiceConfig serviceConfig) {
 
         this.processorContext = processorContext;
+        logger = getLogger(getClass().getPackage().getName());
         config = serviceConfig;
     }
 
@@ -30,10 +32,16 @@ public final class DotnetServiceContext {
         return config;
     }
 
-    // gets the process logger
+    // gets the service logger
     public ILogger getLogger() {
 
-        return processorContext.logger();
+        return logger;
+    }
+
+    // gets a logger
+    public ILogger getLogger(String name) {
+
+        return processorContext.hazelcastInstance().getLoggingService().getLogger(name);
     }
 
     // gets the unique identifier of the pipe
@@ -46,6 +54,6 @@ public final class DotnetServiceContext {
     // gets the name of the instance
     public String getInstanceName() {
 
-        return getProcessorContext().hazelcastInstance().getName();
+        return processorContext.hazelcastInstance().getName();
     }
 }

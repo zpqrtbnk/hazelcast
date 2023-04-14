@@ -68,6 +68,8 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
 
     public static final String dotnetConfiguration = "Release"; // Release | Debug
 
+    // note: for tests, the EXE is NOT uploaded to the member and HAS to be in the specified path on the SAME MACHINE
+
     // add \\publish or /publish directory at the end of the path to use the standalone executable (self-contained)
     private final static String dotnetPath = OsHelper.isWindows()
             ? "c:\\Users\\sgay\\Code\\hazelcast-csharp-client\\src\\Hazelcast.Net.Jet\\bin\\" + dotnetConfiguration + "\\net7.0\\win-x64"
@@ -113,7 +115,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
                 .collect(toList());
 
         DotnetServiceConfig config = new DotnetServiceConfig()
-                .withDotnetPath(dotnetPath)
+                .withDirectory(dotnetPath)
                 .withDotnetExe(dotnetExe)
                 // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
                 .withParallelism(4, 4)
@@ -156,7 +158,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
         long startTime = System.currentTimeMillis();
 
         DotnetServiceConfig config = new DotnetServiceConfig()
-                .withDotnetPath(dotnetPath)
+                .withDirectory(dotnetPath)
                 .withDotnetExe(dotnetExe)
                 // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
                 .withParallelism(4, 4)
@@ -241,7 +243,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
         long startTime = System.currentTimeMillis();
 
         DotnetServiceConfig config = new DotnetServiceConfig()
-                .withDotnetPath(dotnetPath)
+                .withDirectory(dotnetPath)
                 .withDotnetExe(dotnetExe)
                 // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
                 .withParallelism(4, 4)
@@ -328,7 +330,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
         long startTime = System.currentTimeMillis();
 
         DotnetServiceConfig config = new DotnetServiceConfig()
-                .withDotnetPath(dotnetPath)
+                .withDirectory(dotnetPath)
                 .withDotnetExe(dotnetExe)
                 // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
                 .withParallelism(4, 4)

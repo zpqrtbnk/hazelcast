@@ -1,30 +1,57 @@
 package com.hazelcast.jet.dotnet;
 
+import com.hazelcast.jet.config.JobConfig;
+
+import java.io.File;
 import java.io.Serializable;
 
 // configures the dotnet service
 public final class DotnetServiceConfig implements Serializable {
 
-    private String dotnetPath;
+    private String jobName;
+    private String directory;
     private String dotnetExe;
     private String methodName;
     private int maxConcurrentOps = 1;
     private int localParallelism = 1;
     private boolean preserveOrder = true;
 
-    // path to the directory containing the dotnet executable
-    public String getDotnetPath() {
+    // name of the job
+    public String getJobName() {
 
-        return dotnetPath;
+        return jobName;
     }
-    public void setDotnetPath(String value) {
+    public void setJobName(String value) {
 
-        dotnetPath = value;
+        jobName = value;
     }
-    public DotnetServiceConfig withDotnetPath(String value) {
+    public DotnetServiceConfig withJobName(String value) {
 
-        setDotnetPath(value);
+        setJobName(value);
         return this;
+    }
+
+    // path to the directory containing the dotnet executable
+    public String getDirectory() {
+
+        return directory;
+    }
+    public void setDirectory(String value) {
+
+        directory = value;
+    }
+    public DotnetServiceConfig withDirectory(String value) {
+
+        setDirectory(value);
+        return this;
+    }
+    public String getDirectoryId() {
+
+        return createId(directory);
+    }
+    public boolean hasDirectory() {
+
+        return directory != null;
     }
 
     // name of the dotnet executable
@@ -40,6 +67,10 @@ public final class DotnetServiceConfig implements Serializable {
 
         setDotnetExe(value);
         return this;
+    }
+    public String getDotnetExeId() {
+
+        return createId(dotnetExe);
     }
 
     // name of the method that the dotnet executable should execute
@@ -108,5 +139,39 @@ public final class DotnetServiceConfig implements Serializable {
 
         setPreserveOrder(value);
         return this;
+    }
+
+    public String getDotnetExeFullPath() {
+
+        return directory == null
+                ? dotnetExe
+                : (directory + File.separator + dotnetExe);
+    }
+
+    public String getDotnetExeDirectory() {
+
+        return directory == null
+                ? new File(dotnetExe).getParent()
+                : directory;
+    }
+
+    public void configureJob(JobConfig jobConfig) {
+
+        jobConfig.setName(jobName);
+
+        // attachDirectory (and File) "Adds the directory identified by the supplied pathname to the list
+        // of files that will be available to the job while it's executing in the Jet cluster"
+
+        if (directory != null) {
+            jobConfig.attachDirectory(directory, createId(directory));
+        }
+        else {
+            jobConfig.attachFile(dotnetExe, createId(dotnetExe));
+        }
+    }
+
+    private String createId(String file) {
+
+        return file.replace('\\', '/').replace('/', '-');
     }
 }

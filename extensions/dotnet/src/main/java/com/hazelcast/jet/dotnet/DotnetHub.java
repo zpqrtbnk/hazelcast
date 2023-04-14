@@ -58,12 +58,12 @@ public final class DotnetHub {
         // - the number of pipes
         // - the name of the method to execute
 
-        String dotnetExe = config.getDotnetPath() + File.separator + config.getDotnetExe();
+        String dotnetExe = config.getDotnetExeFullPath();
         int pipesCount = config.getLocalParallelism() * config.getMaxConcurrentOps();
         ProcessBuilder builder = new ProcessBuilder(dotnetExe, pipeName, Integer.toString(pipesCount), methodName);
 
         dotnetProcess = builder
-                .directory(Paths.get(config.getDotnetPath()).toFile())
+                .directory(new File(config.getDotnetExeDirectory()))
                 .redirectErrorStream(true)
                 .start();
 
