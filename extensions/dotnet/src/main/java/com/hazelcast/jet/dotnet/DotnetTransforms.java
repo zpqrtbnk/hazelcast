@@ -7,7 +7,6 @@ import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.StreamStage;
 
 import javax.annotation.Nonnull;
-import java.io.File;
 import java.util.concurrent.CompletableFuture;
 
 // provides the dotnet transformations
@@ -15,9 +14,9 @@ public final class DotnetTransforms {
 
     private DotnetTransforms() { }
 
-    // maps using dotnet
+    // FIXME temp test code that will be removed, eventually
     @Nonnull
-    public static <TInput, TResult> FunctionEx<StreamStage<TInput>, StreamStage<TResult>> mapAsync(@Nonnull DotnetServiceConfig config) {
+    public static <TInput, TResult> FunctionEx<StreamStage<TInput>, StreamStage<TResult>> mapAsync0(@Nonnull DotnetServiceConfig config) {
 
         final int maxConcurrentOps = config.getMaxConcurrentOps();
         final boolean preserveOrder = config.getPreserveOrder();
@@ -30,13 +29,13 @@ public final class DotnetTransforms {
                         DotnetService::destroy);
 
         return s -> s
-                .mapUsingServiceAsync(dotnetService, maxConcurrentOps, preserveOrder, DotnetService::<TInput, TResult>mapAsync)
+                .mapUsingServiceAsync(dotnetService, maxConcurrentOps, preserveOrder, DotnetService::<TInput, TResult>mapAsync0)
                 .setName(config.getMethodName());
     }
 
     // maps using dotnet
     @Nonnull
-    public static <TInput, TResult> FunctionEx<StreamStage<TInput>, StreamStage<TResult>> mapRawAsync(
+    public static <TInput, TResult> FunctionEx<StreamStage<TInput>, StreamStage<TResult>> mapAsync(
             @Nonnull BiFunctionEx<DotnetService, ? super TInput, ? extends CompletableFuture<TResult>> mapAsyncFn,
             @Nonnull DotnetServiceConfig config) {
 
@@ -45,25 +44,17 @@ public final class DotnetTransforms {
 
         // "When you submit a job, Jet serializes ServiceFactory and sends it to all the cluster members."
 
-        ServiceFactory<?, DotnetService> dotnetService = ServiceFactories
+        ServiceFactory<?, DotnetService> serviceFactory = ServiceFactories
                 // shared: "the service is thread-safe and can be called from multiple-threads, so Hazelcast
                 // will create just one instance on each member and share it among the parallel task-lets."
                 .sharedService(
                         processorContext -> new DotnetService(new DotnetServiceContext(processorContext, config)),
                         DotnetService::destroy);
 
-        // withAttachedDirectory "attaches a directory to this service factory under the given ID. It will
-        // become a part of the Jet job and available to createContextFn() as processorContext.attachedDirectory(id)"
-        // withAttachedFile is same but .attachedFile(id)
-        if (config.hasDirectory()) {
-            dotnetService.withAttachedDirectory(config.getDirectoryId(), new File(config.getDirectory()));
-        }
-        else {
-            dotnetService.withAttachedFile(config.getDotnetExeId(), new File(config.getDotnetExe()));
-        }
+        config.configureServiceFactory(serviceFactory);
 
         return s -> s
-                .mapUsingServiceAsync(dotnetService, maxConcurrentOps, preserveOrder, mapAsyncFn)
+                .mapUsingServiceAsync(serviceFactory, maxConcurrentOps, preserveOrder, mapAsyncFn)
                 .setName(config.getMethodName());
     }
 }

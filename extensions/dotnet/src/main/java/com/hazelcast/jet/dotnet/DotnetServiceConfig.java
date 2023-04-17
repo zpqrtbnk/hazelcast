@@ -1,20 +1,29 @@
 package com.hazelcast.jet.dotnet;
 
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.pipeline.ServiceFactory;
 
 import java.io.File;
 import java.io.Serializable;
+import java.util.UUID;
 
 // configures the dotnet service
 public final class DotnetServiceConfig implements Serializable {
 
+    private UUID jobUUID = UUID.randomUUID();
     private String jobName;
-    private String directory;
+    private String dotnetDir;
     private String dotnetExe;
     private String methodName;
     private int maxConcurrentOps = 1;
     private int localParallelism = 1;
     private boolean preserveOrder = true;
+
+    // uuid of this submitted job
+    public UUID getJobUUID() {
+
+        return jobUUID;
+    }
 
     // name of the job
     public String getJobName() {
@@ -31,27 +40,23 @@ public final class DotnetServiceConfig implements Serializable {
         return this;
     }
 
-    // path to the directory containing the dotnet executable
-    public String getDirectory() {
+    // path to the directory containing the dotnet executables
+    public String getDotnetDir() {
 
-        return directory;
+        return dotnetDir;
     }
-    public void setDirectory(String value) {
+    public void setDotnetDir(String value) {
 
-        directory = value;
+        dotnetDir = value;
     }
-    public DotnetServiceConfig withDirectory(String value) {
+    public DotnetServiceConfig withDotnetDir(String value) {
 
-        setDirectory(value);
+        setDotnetDir(value);
         return this;
     }
-    public String getDirectoryId() {
+    public String getDotnetDirId() {
 
-        return createId(directory);
-    }
-    public boolean hasDirectory() {
-
-        return directory != null;
+        return "dotnet-" + jobUUID;
     }
 
     // name of the dotnet executable
@@ -67,10 +72,6 @@ public final class DotnetServiceConfig implements Serializable {
 
         setDotnetExe(value);
         return this;
-    }
-    public String getDotnetExeId() {
-
-        return createId(dotnetExe);
     }
 
     // name of the method that the dotnet executable should execute
@@ -141,37 +142,29 @@ public final class DotnetServiceConfig implements Serializable {
         return this;
     }
 
-    public String getDotnetExeFullPath() {
-
-        return directory == null
-                ? dotnetExe
-                : (directory + File.separator + dotnetExe);
-    }
-
-    public String getDotnetExeDirectory() {
-
-        return directory == null
-                ? new File(dotnetExe).getParent()
-                : directory;
-    }
-
     public void configureJob(JobConfig jobConfig) {
 
         jobConfig.setName(jobName);
 
-        // attachDirectory (and File) "Adds the directory identified by the supplied pathname to the list
+        // JobConfig:
+        // attachDirectory "Adds the directory identified by the supplied pathname to the list
         // of files that will be available to the job while it's executing in the Jet cluster"
+        //
+        // ServiceFactory:
+        // withAttachedDirectory "attaches a directory to this service factory under the given ID.
+        // It will become a part of the Jet job and available to createContextFn() as
+        // processorContext.attachedDirectory(id)"
+        //
+        // ProcessorSupplier.Context:
+        // attachedDirectory "uses the supplied ID to look up a directory you attached to the current
+        // Jet job. Creates a temporary directory with the same contents on the local cluster member
+        // and returns the location of the created directory.
 
-        if (directory != null) {
-            jobConfig.attachDirectory(directory, createId(directory));
-        }
-        else {
-            jobConfig.attachFile(dotnetExe, createId(dotnetExe));
-        }
+        jobConfig.attachDirectory(dotnetDir, getDotnetDirId());
     }
 
-    private String createId(String file) {
+    public void configureServiceFactory(ServiceFactory serviceFactory) {
 
-        return file.replace('\\', '/').replace('/', '-');
+        serviceFactory.withAttachedDirectory(getDotnetDirId(), new File(dotnetDir));
     }
 }

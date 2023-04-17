@@ -1,6 +1,5 @@
 package com.hazelcast.jet.dotnet;
 
-import com.hazelcast.internal.journal.DeserializingEntry;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.impl.HeapData;
 
@@ -17,25 +16,17 @@ public final class DotnetService {
     DotnetService(DotnetServiceContext serviceContext) throws IOException {
 
         this.serviceContext = serviceContext;
-
-        this.dotnetHub = serviceContext.getConfig().getMethodName().contains("Java")
-            ? null
-            : new DotnetHub(serviceContext);
+        this.dotnetHub = new DotnetHub(serviceContext);
 
         String instanceName = serviceContext.getInstanceName();
-        serviceContext.getLogger().info("DotnetService created for " + instanceName);
+        serviceContext.getLogger().fine("DotnetService created for " + instanceName);
     }
 
-    // maps, using the dotnet service
-    <TInput, TResult> CompletableFuture<TResult> mapAsync(TInput input) {
+    // FIXME temp test code that will be removed, eventually
+    <TInput, TResult> CompletableFuture<TResult> mapAsync0(TInput input) {
 
         DotnetServiceConfig config = serviceContext.getConfig();
         String methodName = config.getMethodName();
-
-        // FIXME: do this differently - maybe the method should be part of the config?
-        // but... once we stop experimenting, we'd have only method? doThingDotnet?
-        // except that method accepts a map entry and produces a map entry of sort,
-        // could we have methods accepting... simple objects?!
 
         if (methodName.equals("toStringJava"))
             return (CompletableFuture<TResult>) Transforms.toStringJava((int) input, serviceContext);
@@ -49,40 +40,31 @@ public final class DotnetService {
         throw new UnsupportedOperationException("DotnetService does not support method '" + methodName + "'");
     }
 
-    // map raw
-    CompletableFuture<Data[]> mapRawAsync(Data[] input) {
-        try {
-            IJetPipe pipe = dotnetHub.getPipe();
+    // maps using dotnet
+    public CompletableFuture<Data[]> mapAsync(Data[] input) {
+        IJetPipe pipe = dotnetHub.getPipe(); // cannot be null, hub would throw
 
-            if (pipe == null) {
-                // FIXME what shall we do if we cannot proceed?
-                serviceContext.getLogger().severe("err: no pipe");
-                return CompletableFuture.completedFuture(null);
-            }
+        byte[][] requestBuffers = new byte[input.length][];
+        for (int i = 0; i < input.length; i++) requestBuffers[i] = input[i].toByteArray();
+        JetMessage requestMessage = new JetMessage(0, requestBuffers);
 
-            byte[][] requestBuffers = new byte[input.length][];
-            for (int i = 0; i < input.length; i++) requestBuffers[i] = input[i].toByteArray();
-            JetMessage requestMessage = new JetMessage(0, requestBuffers);
+        // FIXME we are missing some error-handling cases
+        //   must ensure we always return the pipe to the hub, no matter what
+        //   and, properly report exceptions that would occur in the futures
 
-            return pipe
-                    .write(requestMessage)
-                    .thenCompose(x -> pipe.read())
-                    .thenApply(responseMessage -> {
-                        dotnetHub.returnPipe(pipe);
-                        byte[][] responseBuffers = responseMessage.getBuffers();
-                        Data[] data = new Data[responseBuffers.length];
-                        for (int i = 0; i < data.length; i++) data[i] = new HeapData(responseBuffers[i]);
-                        return data;
-                    });
-        }
-        catch (Exception e) {
-            // FIXME what shall we do if we cannot proceed?
-            e.printStackTrace();
-            return CompletableFuture.completedFuture(null);
-        }
+        return pipe
+                .write(requestMessage)
+                .thenCompose(x -> pipe.read())
+                .thenApply(responseMessage -> {
+                    dotnetHub.returnPipe(pipe);
+                    byte[][] responseBuffers = responseMessage.getBuffers();
+                    Data[] data = new Data[responseBuffers.length];
+                    for (int i = 0; i < data.length; i++) data[i] = new HeapData(responseBuffers[i]);
+                    return data;
+                });
     }
 
-    void destroy() {
+    public void destroy() {
 
         if (dotnetHub != null) dotnetHub.destroy();
     }

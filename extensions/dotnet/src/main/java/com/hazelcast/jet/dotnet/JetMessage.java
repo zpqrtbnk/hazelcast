@@ -3,7 +3,7 @@ package com.hazelcast.jet.dotnet;
 // represents a jet message
 public class JetMessage {
 
-    private final int SizeOfInt = Integer.BYTES;
+    private final static int SizeOfInt = Integer.BYTES;
     private final int operationId;
     private final byte[][] buffers;
 
@@ -41,7 +41,7 @@ public class JetMessage {
 
         int requiredBytes = SizeOfInt + SizeOfInt; // id + buffers.length
         if (buffers != null) {
-            for (int i = 0; i < buffers.length; i++) requiredBytes += buffers[i].length + SizeOfInt;
+            for (byte[] buffer : buffers) requiredBytes += buffer.length + SizeOfInt;
         }
         return requiredBytes;
     }

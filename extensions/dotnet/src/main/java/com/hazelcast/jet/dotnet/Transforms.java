@@ -64,9 +64,9 @@ public final class Transforms {
         Object key = entry.getKey(); // force deserialization of the key
         Object value = entry.getValue(); // force deserialization of the value
 
-        objects[0] = entry.getDataKey().toByteArray(); // dotnet is not re-serializing either
+        objects[0] = DeserializingEntryExtensions.getDataKey(entry).toByteArray(); // dotnet is not re-serializing either
         //context.getProcessorContext().hazelcastInstance().ser;;; // how can I get the serialization service?
-        objects[1] = entry.getDataValue().toByteArray(); // FIXME
+        objects[1] = DeserializingEntryExtensions.getDataValue(entry).toByteArray(); // FIXME
 
         // FIXME how can we create and serialize a whatever other object?
 
@@ -94,8 +94,8 @@ public final class Transforms {
             DeserializingEntry entry = (DeserializingEntry) input;
 
             byte[][] buffers = new byte[2][];
-            buffers[0] = entry.getDataKey().toByteArray();
-            buffers[1] = entry.getDataValue().toByteArray();
+            buffers[0] = DeserializingEntryExtensions.getDataKey(entry).toByteArray();
+            buffers[1] = DeserializingEntryExtensions.getDataValue(entry).toByteArray();
             JetMessage message = new JetMessage(0, buffers);
 
             return pipe

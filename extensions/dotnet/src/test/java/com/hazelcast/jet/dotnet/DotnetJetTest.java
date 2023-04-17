@@ -115,7 +115,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
                 .collect(toList());
 
         DotnetServiceConfig config = new DotnetServiceConfig()
-                .withDirectory(dotnetPath)
+                .withDotnetDir(dotnetPath)
                 .withDotnetExe(dotnetExe)
                 // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
                 .withParallelism(4, 4)
@@ -130,7 +130,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
         p
                 .readFrom(TestSources.items(items)).addTimestamps(x -> 0, 0)
 
-                .apply(DotnetTransforms.<Integer, String>mapAsync(config))
+                .apply(DotnetTransforms.<Integer, String>mapAsync0(config))
                 .setLocalParallelism(config.getLocalParallelism()) // number of processors per member
 
                 .writeTo(AssertionSinks.assertAnyOrder("Fail to get expected items.", expected));
@@ -158,7 +158,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
         long startTime = System.currentTimeMillis();
 
         DotnetServiceConfig config = new DotnetServiceConfig()
-                .withDirectory(dotnetPath)
+                .withDotnetDir(dotnetPath)
                 .withDotnetExe(dotnetExe)
                 // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
                 .withParallelism(4, 4)
@@ -176,7 +176,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
                 .withIngestionTimestamps()
 
                 // dotnet transform produces an array of objects
-                .apply(DotnetTransforms.mapAsync(config))
+                .apply(DotnetTransforms.mapAsync0(config))
                 .setLocalParallelism(config.getLocalParallelism()) // number of processors per member
 
                 // we know that the objects are [0]:keyData and [1]:valueData
@@ -243,7 +243,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
         long startTime = System.currentTimeMillis();
 
         DotnetServiceConfig config = new DotnetServiceConfig()
-                .withDirectory(dotnetPath)
+                .withDotnetDir(dotnetPath)
                 .withDotnetExe(dotnetExe)
                 // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
                 .withParallelism(4, 4)
@@ -261,12 +261,12 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
                 .withIngestionTimestamps()
 
                 // dotnet transforms Data[] to Data[]
-                .apply(DotnetTransforms.mapRawAsync((service, input) -> {
+                .apply(DotnetTransforms.mapAsync((service, input) -> {
                     DeserializingEntry entry = (DeserializingEntry) input;
                     Data[] rawInput = new Data[2];
-                    rawInput[0] = entry.getDataKey();
-                    rawInput[1] = entry.getDataValue();
-                    return service.mapRawAsync(rawInput);
+                    rawInput[0] = DeserializingEntryExtensions.getDataKey(entry);
+                    rawInput[1] = DeserializingEntryExtensions.getDataValue(entry);
+                    return service.mapAsync(rawInput);
                 }, config))
                 .setLocalParallelism(config.getLocalParallelism()) // number of processors per member
 
@@ -330,7 +330,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
         long startTime = System.currentTimeMillis();
 
         DotnetServiceConfig config = new DotnetServiceConfig()
-                .withDirectory(dotnetPath)
+                .withDotnetDir(dotnetPath)
                 .withDotnetExe(dotnetExe)
                 // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
                 .withParallelism(4, 4)
@@ -348,11 +348,11 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
                 .withIngestionTimestamps()
 
                 // dotnet transforms Data[] to Data[]
-                .apply(DotnetTransforms.mapRawAsync((service, input) -> {
+                .apply(DotnetTransforms.mapAsync((service, input) -> {
                     DeserializingEntry entry = (DeserializingEntry) input;
                     SomeThing someThing = (SomeThing) entry.getValue();
                     Object[] output = new Object[2];
-                    output[0] = entry.getDataKey();
+                    output[0] = DeserializingEntryExtensions.getDataKey(entry);
                     OtherThing otherThing = new OtherThing();
                     otherThing.setValue("__" + someThing.getValue() + "__");
                     output[1] = otherThing;

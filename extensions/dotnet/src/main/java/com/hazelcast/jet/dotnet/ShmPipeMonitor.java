@@ -8,6 +8,7 @@ public final class ShmPipeMonitor {
     private final Thread thread;
     private final ShmPipe pipe;
     private boolean running;
+    private int spinDelay;
     private CompletableFuture<Void> readFuture;
     private CompletableFuture<Void> writeFuture;
     private int requiredBytes;
@@ -34,35 +35,37 @@ public final class ShmPipeMonitor {
                     f.complete(null);
                 }
 
-                /**/
                 try {
-                    // FIXME what's a good value? when going REALLY fast...
-                    // in fact, setting a future should trigger an immediate verification!
-                    // and, we should stop spinning (and do?) if we don't have a future
-                    // blocking the thread with some sort of semaphore
-                    if (pipe.getSpinDelay() > 0)
-                        TimeUnit.MILLISECONDS.sleep(pipe.getSpinDelay());
+                    // FIXME we can do better
+                    //   as long as we don't have futures, we don't need to spin
+                    if (spinDelay > 0)
+                        TimeUnit.MILLISECONDS.sleep(spinDelay);
                 }
                 catch (InterruptedException ie) {
-                    // ??
+                    // FIXME this is a bad idea
                 }
             }
         }
     }
 
     // initializes a new monitor
-    public ShmPipeMonitor(ShmPipe pipe) {
+    public ShmPipeMonitor(ShmPipe pipe, int spinDelay) {
 
         this.pipe = pipe;
+        this.spinDelay = spinDelay;
         this.running = true;
 
         thread = new MonitorThread();
         thread.start();
     }
 
+    // NOTE: the pipe monitor (and the pipe itself) is NOT thread-safe at
+    // the moment, it's only one read or one write and one at a time, so
+    // waitCanRead and waitCanWrite assume that if they have to wait and
+    // return a future, there is NOT another future
+
     public CompletableFuture<Void> waitCanRead() {
 
-        if (readFuture != null) return readFuture; // FIXME race! + should NEVER happen
         if (pipe.canRead()) return CompletableFuture.completedFuture(null);
         return readFuture = new CompletableFuture<>();
     }
@@ -70,7 +73,6 @@ public final class ShmPipeMonitor {
     public CompletableFuture<Void> waitCanWrite(int requiredBytes) {
 
         this.requiredBytes = Math.max(this.requiredBytes, requiredBytes);
-        if (writeFuture != null) return writeFuture; // FIXME race! + should NEVER happen
         if (pipe.canWrite(requiredBytes)) return CompletableFuture.completedFuture(null);
         return writeFuture = new CompletableFuture<>();
     }
@@ -82,7 +84,7 @@ public final class ShmPipeMonitor {
             thread.join();
         }
         catch (InterruptedException e) {
-            // FIXME meh?
+            // FIXME this is a bad idea
         }
     }
 }

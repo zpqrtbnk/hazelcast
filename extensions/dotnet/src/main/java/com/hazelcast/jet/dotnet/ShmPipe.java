@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 // represents a shared memory based pipe
 public final class ShmPipe implements IJetPipe {
 
-    private final int SizeOfInt = Integer.BYTES;
+    private final static int SizeOfInt = Integer.BYTES;
     private final ShmPipeMonitor monitor;
 
     private final int outWpOffset;
@@ -49,7 +49,7 @@ public final class ShmPipe implements IJetPipe {
 
         this.capacity = dataCapacity;
         this.spinDelay = spinDelayMilliseconds;
-        this.monitor = new ShmPipeMonitor(this);
+        this.monitor = new ShmPipeMonitor(this, spinDelay);
 
         // total size
         int size = 4 * SizeOfInt + 2 * dataCapacity;
@@ -60,15 +60,15 @@ public final class ShmPipe implements IJetPipe {
                 ? Paths.get(filename)
                 : Paths.get(System.getProperty("java.io.tmpdir"), "hz-shmpipe-" + this.uid);
         if (isOwner && Files.exists(this.filename)) throw new IllegalArgumentException("File " + this.filename + " already exists.");
-        if (!isOwner && !Files.exists(this.filename)) {//throw new IllegalArgumentException("File " + this.filename + " does not exist.");
-            // FIXME maybe we need to retry a bit?
-            int count = 10;
+        if (!isOwner && !Files.exists(this.filename)) {
+            int count = 10; // retry for 10 times 500ms ie 5s
             while (!Files.exists(this.filename) && --count > 0) {
                 try {
                     TimeUnit.MILLISECONDS.sleep(500);
                 }
                 catch (InterruptedException ie) {
-                    // ??
+                    // FIXME this probably is a very bad idea
+                    // meh
                 }
             }
             if (count == 0) throw new IllegalArgumentException("File " + this.filename + " does not exist.");
@@ -237,6 +237,7 @@ public final class ShmPipe implements IJetPipe {
         int length2 = buffer.length - length;
         outwp += length2;
 
+        // TODO: same
         ((ByteBuffer)mapBuffer.duplicate().position(destination)).put(buffer, length, length2);
     }
 
