@@ -2,15 +2,25 @@ package com.hazelcast.jet.dotnet;
 
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.ServiceFactory;
+import com.hazelcast.logging.Logger;
 
 import java.io.File;
+import java.io.FilenameFilter;
+import java.io.IOException;
 import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 // configures the dotnet service
 public final class DotnetServiceConfig implements Serializable {
 
-    private UUID jobUUID = UUID.randomUUID();
+    // TODO: once tests are done, adopt 1 number and stick with it
+    //private static final long serialVersionUID = 3127394993311485471L;
+    private static final long serialVersionUID = -1865148793772904203L;
+
     private String jobName;
     private String dotnetDir;
     private String dotnetExe;
@@ -18,12 +28,6 @@ public final class DotnetServiceConfig implements Serializable {
     private int maxConcurrentOps = 1;
     private int localParallelism = 1;
     private boolean preserveOrder = true;
-
-    // uuid of this submitted job
-    public UUID getJobUUID() {
-
-        return jobUUID;
-    }
 
     // name of the job
     public String getJobName() {
@@ -54,9 +58,9 @@ public final class DotnetServiceConfig implements Serializable {
         setDotnetDir(value);
         return this;
     }
-    public String getDotnetDirId() {
+    public String getDotnetDirId(String platform) {
 
-        return "dotnet-" + jobUUID;
+        return "dotnet-" + platform + "-";
     }
 
     // name of the dotnet executable
@@ -160,11 +164,45 @@ public final class DotnetServiceConfig implements Serializable {
         // Jet job. Creates a temporary directory with the same contents on the local cluster member
         // and returns the location of the created directory.
 
-        jobConfig.attachDirectory(dotnetDir, getDotnetDirId());
+        // and then: attaching a directory ends up using IOUtil.packDirectoryIntoZip which does not
+        // support subdirectories, so we cannot attach the whole directory containing all platforms,
+        // we're going to have to include one directory per platform.
+
+        // this code runs on the client which is submitting the job
+
+        File[] directories = new File(dotnetDir).listFiles(File::isDirectory);
+        if (directories != null) {
+            for (File directory : directories) {
+                String id = getDotnetDirId(directory.getName());
+                jobConfig.attachDirectory(directory, id);
+            }
+        }
     }
 
     public void configureServiceFactory(ServiceFactory serviceFactory) {
 
-        serviceFactory.withAttachedDirectory(getDotnetDirId(), new File(dotnetDir));
+        // FIXME understand
+        // jobConfig.attachDirectory will ZIP a directory and send it along the submit,
+        // processorContext.recreateAttachedDirectory will unzip a directory to disk
+        // but,
+        // what is serviceFactory.withAttachedDirectory doing exactly?
+        // where is this code running? client or member?
+        // TODO: if member, then dotnetDir is n/a and we must do better?
+
+        // withAttachedDirectory wants the directory to exist and be a directory
+        // how?!
+        // it just adds the (id, directory) into a map in the service factory
+        // which ComputeStateImplBase then attach to the pipeline impl
+        // and re-used by AbstractJetInstance to re-attach the files to the job config it creates
+        //
+        // (I am lost already)
+
+        File[] directories = new File(dotnetDir).listFiles(File::isDirectory);
+        if (directories != null) {
+            for (File directory : directories) {
+                String id = getDotnetDirId(directory.getName());
+                serviceFactory.withAttachedDirectory(id, directory);
+            }
+        }
     }
 }

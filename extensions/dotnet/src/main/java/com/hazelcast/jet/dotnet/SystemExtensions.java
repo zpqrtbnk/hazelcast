@@ -1,5 +1,6 @@
 package com.hazelcast.jet.dotnet;
 
+import com.hazelcast.internal.util.OsHelper;
 import com.hazelcast.logging.ILogger;
 
 import java.io.BufferedReader;
@@ -8,10 +9,10 @@ import java.io.InputStreamReader;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-// provides process management methods
-public final class ProcessExtensions {
+// provides system methods
+final class SystemExtensions {
 
-    private ProcessExtensions() { }
+    private SystemExtensions() { }
 
     // gets the identifier of a process
     public static String processPid(Process process) {
@@ -40,5 +41,17 @@ public final class ProcessExtensions {
         }, "dotnet-hub-logger-" + processId);
         thread.start();
         return thread;
+    }
+
+    // gets the current platform
+    public static String getPlatform() {
+        String platform =
+                OsHelper.isWindows() ? "win-x64" :
+                OsHelper.isLinux() ? "linux-x64" :
+                OsHelper.isMac() ? "osx-x64" :
+                //OsHelper.isUnixFamily() ? "unknown" :
+                "unknown";
+
+        return platform;
     }
 }

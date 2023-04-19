@@ -24,6 +24,7 @@ import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.server.FirewallingServer.FirewallingServerConnectionManager;
 import com.hazelcast.internal.server.OperationPacketFilter;
 import com.hazelcast.internal.server.PacketFilter;
+import com.hazelcast.internal.server.ServerConnectionManager;
 import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.internal.util.collection.IntHashSet;
 
@@ -45,12 +46,14 @@ public final class PacketFiltersUtil {
 
     public static FirewallingServerConnectionManager getConnectionManager(HazelcastInstance instance) {
         Node node = getNode(instance);
-        return (FirewallingServerConnectionManager) node.getServer().getConnectionManager(EndpointQualifier.MEMBER);
+        ServerConnectionManager manager = node.getServer().getConnectionManager(EndpointQualifier.MEMBER);
+        if (manager instanceof FirewallingServerConnectionManager) return (FirewallingServerConnectionManager) manager;
+        return null;
     }
 
     public static void resetPacketFiltersFrom(HazelcastInstance instance) {
         FirewallingServerConnectionManager cm = getConnectionManager(instance);
-        cm.removePacketFilter();
+        if (cm != null) cm.removePacketFilter();
     }
 
     public static void delayOperationsFrom(HazelcastInstance instance, int factory, List<Integer> opTypes) {

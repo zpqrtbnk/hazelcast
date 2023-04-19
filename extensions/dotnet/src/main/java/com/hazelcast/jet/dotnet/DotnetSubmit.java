@@ -63,7 +63,7 @@ public final class DotnetSubmit {
             }
         }
 
-        if (argi != args.length) {
+        if (argi != args.length || argDotnetDir == null || argDotnetExe == null) {
             System.out.println("error!");
             usage();
             System.exit(1);

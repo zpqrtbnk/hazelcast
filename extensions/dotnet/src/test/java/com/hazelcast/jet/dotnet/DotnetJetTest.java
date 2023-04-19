@@ -4,10 +4,12 @@ import com.hazelcast.config.Config;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.internal.journal.DeserializingEntry;
 import com.hazelcast.internal.serialization.Data;
+import com.hazelcast.internal.serialization.impl.ByteArrayObjectDataOutput;
 import com.hazelcast.internal.util.OsHelper;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.core.JobStatus;
+import com.hazelcast.jet.impl.util.IOUtil;
 import com.hazelcast.jet.pipeline.*;
 import com.hazelcast.jet.pipeline.test.AssertionSinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
@@ -17,6 +19,12 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -412,6 +420,48 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
 
         long totalTime = System.currentTimeMillis() - startTime;
         System.out.println(totalTime);
+    }
+
+    @Test
+    public void zip() throws IOException {
+
+        // not supposed to include the subdirectories
+        // there's a note on packDirectoryIntoZip
+        // but this test *does* include the subdirectories
+        // ??
+
+        // anyway let's say it's better to have each platform as an independent directory
+        // so we only recreate what we need
+
+        ByteArrayOutputStream oStream = new ByteArrayOutputStream();
+        Path source = Paths.get("c:\\Users\\sgay\\Code\\hazelcast-jet-dotnet\\dotnet-service\\target-sc");
+        IOUtil.packDirectoryIntoZip(source, oStream);
+        ByteArrayInputStream iStream = new ByteArrayInputStream(oStream.toByteArray());
+        Path target = Paths.get("c:\\Users\\sgay\\Code\\hazelcast-jet-dotnet\\dotnet-service\\target-sc2");
+        IOUtil.unzip(iStream, target);
+    }
+
+    @Test
+    public void list() {
+
+        // this works as expected
+        // if the path has the correct platform format, that is
+        // using the linux dir path => directory is not found
+
+        String dotnetDir = "/c/Users/sgay/Code/hazelcast-jet-dotnet/dotnet-service/target-sc";
+        //String dotnetDir = "c:\\Users\\sgay\\Code\\hazelcast-jet-dotnet\\dotnet-service\\target-sc";
+        File[] directories = new File(dotnetDir).listFiles(File::isDirectory);
+        System.out.println("TEST");
+        if (directories != null) {
+            System.out.println("DIR");
+            for (File directory : directories) {
+                String platform = directory.getName();
+                String id = "dotnet-" + platform;
+                //String id = getDotnetDirId(directory.getName());
+                //jobConfig.attachDirectory(directory, id);
+                System.out.println(id);
+            }
+        }
     }
 }
 

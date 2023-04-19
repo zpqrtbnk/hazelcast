@@ -1,11 +1,15 @@
 package com.hazelcast.jet.dotnet;
 
-import com.hazelcast.internal.util.OsHelper;
 import com.hazelcast.logging.ILogger;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static java.lang.Thread.currentThread;
@@ -65,37 +69,34 @@ public final class DotnetHub {
         // - the number of pipes
         // - the name of the method to execute (?)
 
-        String platform =
-                OsHelper.isWindows() ? "win-x64" :
-                OsHelper.isLinux() ? "linux-x64" :
-                OsHelper.isMac() ? "osx-x64" :
-                OsHelper.isUnixFamily() ? "unix-x64" :  // not sure this is really a platform?
-                null;
-
-        if (platform == null) {
-            throw new IOException("Unsupported platform " + OsHelper.OS);
-        }
-
         File runtimeDir = serviceContext.getRuntimeDir();
         if (!runtimeDir.exists() || !runtimeDir.isDirectory()) {
             throw new IOException("Invalid runtime directory " + runtimeDir);
         }
 
-        String platformDir = runtimeDir + File.separator + platform;
-        File platformFile = new File(platformDir);
-        if (!platformFile.exists() || !platformFile.isDirectory()) {
-            throw new IOException("Missing platform " + platform);
-        }
+        String platform = SystemExtensions.getPlatform();
+//        String platformDir = runtimeDir + File.separator + platform;
+//        File platformFile = new File(platformDir);
+//        if (!platformFile.exists() || !platformFile.isDirectory()) {
+//            throw new IOException("Missing platform " + platform);
+//        }
 
         logger.fine("Runtime directory: " + runtimeDir + ", Platform: " + platform);
 
-        String dotnetExe = platformDir + File.separator + config.getDotnetExe();
+        String dotnetExe = runtimeDir + File.separator + config.getDotnetExe();
         if (!(new File(dotnetExe).exists())) {
             dotnetExe += ".exe";
         }
         if (!(new File(dotnetExe).exists())) {
-            throw new IOException("Could not find executable file.");
+            throw new IOException("Could not find executable file " + dotnetExe + ".");
         }
+
+        // on Viridian, we don't have permission to execute the file
+        // we don't have permission to change the permissions either
+        //Path dotnetExePath = Paths.get(dotnetExe);
+        //Set<PosixFilePermission> perms = Files.getPosixFilePermissions(dotnetExePath);
+        //perms.add(PosixFilePermission.OWNER_EXECUTE);
+        //Files.setPosixFilePermissions(dotnetExePath, perms);
 
         int pipesCount = config.getLocalParallelism() * config.getMaxConcurrentOps();
         ProcessBuilder builder = new ProcessBuilder(dotnetExe, pipeName, Integer.toString(pipesCount), methodName);
@@ -105,8 +106,8 @@ public final class DotnetHub {
                 .redirectErrorStream(true)
                 .start();
 
-        dotnetProcessId = ProcessExtensions.processPid(dotnetProcess);
-        stdoutLoggingThread = ProcessExtensions.logStdOut(dotnetProcess, logger);
+        dotnetProcessId = SystemExtensions.processPid(dotnetProcess);
+        stdoutLoggingThread = SystemExtensions.logStdOut(dotnetProcess, logger);
         logger.fine("DotnetHub [" + dotnetProcessId + "] started, running " + methodName + " for " + instanceName + " over " + pipeName);
     }
 
