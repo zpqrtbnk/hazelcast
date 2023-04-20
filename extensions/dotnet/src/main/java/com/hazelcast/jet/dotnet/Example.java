@@ -37,7 +37,7 @@ public class Example {
                 .readFrom(Sources.mapJournal("streamed-map", JournalInitialPosition.START_FROM_CURRENT))
                 .withIngestionTimestamps()
 
-                .apply(DotnetTransforms.mapAsync(Example::mapAsync, config))
+                .apply(DotnetTransforms.mapAsync(DotnetService::mapAsync, config))
                 .setLocalParallelism(config.getLocalParallelism()) // number of processors per member
 
                 .writeTo(Sinks.map("result-map"));
@@ -49,25 +49,5 @@ public class Example {
                 .addClass(Example.class);
         config.configureJob(jobConfig);
         Hazelcast.bootstrappedInstance().getJet().newJob(pipeline, jobConfig);
-    }
-
-    private static CompletableFuture<Map.Entry<Object, Object>> mapAsync(DotnetService service, Map.Entry<Object, Object> input) {
-
-        // this method adapts the pipeline values (which are Map.Entry instances)
-        // to the service-expected array of Data, back and forth
-
-        // TODO: do better?
-        //   how many different type of pipeline values would we need to support?
-        //   could this be directly supported by the service?
-
-        // prepare input
-        DeserializingEntry entry = (DeserializingEntry) input;
-        Data[] rawInput = new Data[2];
-        rawInput[0] = DeserializingEntryExtensions.getDataKey(entry);
-        rawInput[1] = DeserializingEntryExtensions.getDataValue(entry);
-
-        return service
-                .mapAsync(rawInput) // invoke dotnet
-                .thenApply(x -> DeserializingEntryExtensions.createNew(entry, x[0], x[1])); // map result
     }
 }

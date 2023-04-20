@@ -1,9 +1,11 @@
 package com.hazelcast.jet.dotnet;
 
+import com.hazelcast.internal.journal.DeserializingEntry;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.impl.HeapData;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 // provides the dotnet service
@@ -38,6 +40,17 @@ public final class DotnetService {
             return Transforms.doThingDotnet(input, serviceContext, dotnetHub);
 
         throw new UnsupportedOperationException("DotnetService does not support method '" + methodName + "'");
+    }
+
+    // maps an entry using dotnet
+    public <TK1, TV1, TK2, TV2> CompletableFuture<Map.Entry<TK2, TV2>> mapAsync(Map.Entry<TK1, TV1> entry) {
+
+        DeserializingEntry<TK1, TV1> deserializingEntry = (DeserializingEntry<TK1, TV1>) entry;
+        Data[] data = new Data[2];
+        data[0] = DeserializingEntryExtensions.getDataKey(deserializingEntry);
+        data[1] = DeserializingEntryExtensions.getDataValue(deserializingEntry);
+        return mapAsync(data)
+                .thenApply(x -> DeserializingEntryExtensions.createNew(deserializingEntry, x[0], x[1]));
     }
 
     // maps using dotnet

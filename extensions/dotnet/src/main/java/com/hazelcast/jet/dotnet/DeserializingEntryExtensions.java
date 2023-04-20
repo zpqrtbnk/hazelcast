@@ -37,7 +37,7 @@ public final class DeserializingEntryExtensions {
         initialized = true;
     }
 
-    public static Data getDataKey(DeserializingEntry entry) {
+    public static <TK, TV> Data getDataKey(DeserializingEntry<TK, TV> entry) {
 
         // is private
         //return entry.dataKey;
@@ -51,7 +51,7 @@ public final class DeserializingEntryExtensions {
         }
     }
 
-    public static Data getDataValue(DeserializingEntry entry) {
+    public static <TK, TV> Data getDataValue(DeserializingEntry<TK, TV> entry) {
 
         // is private
         //return entry.dataValue;
@@ -65,8 +65,8 @@ public final class DeserializingEntryExtensions {
         }
     }
 
-    public static DeserializingEntry createNew(DeserializingEntry entry, Data dataKey, Data dataValue) {
-        DeserializingEntry result = new DeserializingEntry(dataKey, dataValue);
+    public static <TK, TV> DeserializingEntry<TK, TV> createNew(DeserializingEntry<?,?> entry, Data dataKey, Data dataValue) {
+        DeserializingEntry<TK, TV> result = new DeserializingEntry<TK, TV>(dataKey, dataValue);
 
         // is private
         //result.serializationService = entry.serializationService;
