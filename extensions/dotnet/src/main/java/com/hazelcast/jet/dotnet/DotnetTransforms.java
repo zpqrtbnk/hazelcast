@@ -7,6 +7,7 @@ import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.StreamStage;
 
 import javax.annotation.Nonnull;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 // provides the dotnet transformations
@@ -31,6 +32,14 @@ public final class DotnetTransforms {
         return s -> s
                 .mapUsingServiceAsync(dotnetService, maxConcurrentOps, preserveOrder, DotnetService::<TInput, TResult>mapAsync0)
                 .setName(config.getMethodName());
+    }
+
+    // maps using dotnet
+    @Nonnull
+    public static <TK1, TV1, TK2, TV2> FunctionEx<StreamStage<Map.Entry<TK1, TV1>>, StreamStage<Map.Entry<TK2, TV2>>> mapAsync(
+            @Nonnull DotnetServiceConfig config) {
+
+        return mapAsync(DotnetService::mapAsync, config);
     }
 
     // maps using dotnet
