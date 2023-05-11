@@ -82,9 +82,15 @@ public final class DotnetSubmit {
         }
 
         // ensure platform executables exist
+        // see: https://learn.microsoft.com/en-us/dotnet/core/rid-catalog
+        // os: { win, linux, osx } and platform: { x86, x84, arm, arm64 }
         int platformCount = 0;
         platformCount += EnsurePlatformExe("win-x64", argDotnetDir, argDotnetExe);
+        platformCount += EnsurePlatformExe("win-arm64", argDotnetDir, argDotnetExe);
         platformCount += EnsurePlatformExe("linux-x64", argDotnetDir, argDotnetExe);
+        platformCount += EnsurePlatformExe("linux-arm64", argDotnetDir, argDotnetExe);
+        platformCount += EnsurePlatformExe("osx-x64", argDotnetDir, argDotnetExe);
+        platformCount += EnsurePlatformExe("osx-arm64", argDotnetDir, argDotnetExe);
         if (platformCount == 0) {
             System.out.println("error! no platform found in <directory>");
             System.exit(1);

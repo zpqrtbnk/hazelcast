@@ -2,6 +2,8 @@ package com.hazelcast.jet.dotnet;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.MapConfig;
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.internal.journal.DeserializingEntry;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.impl.ByteArrayObjectDataOutput;
@@ -30,6 +32,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
 
@@ -71,8 +74,9 @@ import static java.util.stream.Collectors.toList;
  */
 public class DotnetJetTest extends SimpleTestInClusterSupport {
 
-    private static final int ITEM_COUNT = 10_000; // for strings
-    private static final int THINGS_COUNT = 10_000; // for things
+    private static final int ITEM_COUNT = 20_000; // for strings
+    private static final int THINGS_COUNT = 20_000; // for things
+    private static final int MULT_COUNT = 100_000; // for multiply
 
     public static final String dotnetConfiguration = "Release"; // Release | Debug
 
@@ -421,6 +425,57 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
         long totalTime = System.currentTimeMillis() - startTime;
         System.out.println(totalTime);
     }
+
+    /*
+    @Test
+    public void multiplyIntegerJava() {
+        multiplyInteger("multiplyIntegerJava");
+    }
+
+    @Test
+    public void multiplyIntegerDotnet() {
+        multiplyInteger("multiplyIntegerDotnet");
+    }
+
+    @Test
+    public void multiplyInteger(String methodName) {
+
+        List<Integer> items = IntStream
+                .range(0, ITEM_COUNT)
+                .boxed() // convert to Integer instances
+                .collect(toList());
+
+        DotnetServiceConfig config = new DotnetServiceConfig()
+                .withDotnetDir(dotnetPath)
+                .withDotnetExe(dotnetExe)
+                // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
+                .withParallelism(4, 4)
+                .withPreserveOrder(true)
+                .withMethodName(methodName);
+
+        BiFunctionEx mapAsyncFn = methodName == "multiplyIntegerJava"
+            ? (input, context) -> CompletableFuture.completedFuture("__" + input + "__")
+            : (input, context) -> {
+                IJetPipe pipe =
+            };
+
+        FunctionEx transformFn = DotnetTransforms.<Integer, String>mapAsync1(config, mapAsyncFn);
+
+        // compose the pipeline
+        Pipeline p = Pipeline.create();
+        p
+                .readFrom(TestSources.items(items)).addTimestamps(x -> 0, 0)
+                .apply(transformFn)
+                .setLocalParallelism(config.getLocalParallelism()) // number of processors per member
+                .writeTo(Sinks.noop());
+
+        // submit the job & wait for completion
+        long startTime = System.currentTimeMillis();
+        instance().getJet().newJob(p).join();
+        long totalTime = System.currentTimeMillis() - startTime;
+        System.out.println(totalTime);
+    }
+    */
 
     @Test
     public void zip() throws IOException {

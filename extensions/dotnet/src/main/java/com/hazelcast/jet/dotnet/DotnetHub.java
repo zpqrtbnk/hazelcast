@@ -1,5 +1,6 @@
 package com.hazelcast.jet.dotnet;
 
+import com.hazelcast.internal.util.OsHelper;
 import com.hazelcast.logging.ILogger;
 
 import java.io.File;
@@ -10,6 +11,7 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static java.lang.Thread.currentThread;
@@ -92,11 +94,15 @@ public final class DotnetHub {
         }
 
         // on Viridian, we don't have permission to execute the file
-        // we don't have permission to change the permissions either
-        //Path dotnetExePath = Paths.get(dotnetExe);
-        //Set<PosixFilePermission> perms = Files.getPosixFilePermissions(dotnetExePath);
-        //perms.add(PosixFilePermission.OWNER_EXECUTE);
-        //Files.setPosixFilePermissions(dotnetExePath, perms);
+        // but we don't have permission to change the permissions either
+
+        // on some OS the file actually needs to be executable
+        if (!OsHelper.isWindows()) {
+            Path dotnetExePath = Paths.get(dotnetExe);
+            Set<PosixFilePermission> perms = Files.getPosixFilePermissions(dotnetExePath);
+            perms.add(PosixFilePermission.OWNER_EXECUTE);
+            Files.setPosixFilePermissions(dotnetExePath, perms);
+        }
 
         int pipesCount = config.getLocalParallelism() * config.getMaxConcurrentOps();
         ProcessBuilder builder = new ProcessBuilder(dotnetExe, pipeName, Integer.toString(pipesCount), methodName);
@@ -209,6 +215,15 @@ public final class DotnetHub {
         IJetPipe pipe = pipes.poll();
         if (pipe == null) throw new IllegalStateException("Could not provide a pipe.");
         return pipe;
+    }
+
+    // wip
+    public CompletableFuture<IJetPipe> getPipeX() {
+
+        // TODO: need a way to do this in a nice way + abort/cancel when needed
+        IJetPipe pipe;
+        while ((pipe = pipes.poll()) == null) {} // uh no!! use a blocking queue of some sort!!
+        return CompletableFuture.completedFuture(pipe);
     }
 
     // return a pipe to the hub

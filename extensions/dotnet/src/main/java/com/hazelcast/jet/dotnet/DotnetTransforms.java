@@ -34,6 +34,28 @@ public final class DotnetTransforms {
                 .setName(config.getMethodName());
     }
 
+    /*
+    @Nonnull
+    public static <TInput, TResult> FunctionEx<StreamStage<TInput>, StreamStage<TResult>> mapAsync1(
+            @Nonnull DotnetServiceConfig config,
+            BiFunctionEx mapAsyncFn) {
+
+        final int maxConcurrentOps = config.getMaxConcurrentOps();
+        final boolean preserveOrder = config.getPreserveOrder();
+
+        ServiceFactory<?, DotnetService> dotnetService = ServiceFactories
+                // shared: "the service is thread-safe and can be called from multiple-threads, so Hazelcast
+                // will create just one instance on each member and share it among the parallel task-lets."
+                .sharedService(
+                        processorContext -> new DotnetService(new DotnetServiceContext(processorContext, config)),
+                        DotnetService::destroy);
+
+        return s -> s
+                .mapUsingServiceAsync(dotnetService, maxConcurrentOps, preserveOrder, mapAsyncFn)
+                .setName(config.getMethodName());
+    }
+    */
+
     // maps using dotnet
     @Nonnull
     public static <TK1, TV1, TK2, TV2> FunctionEx<StreamStage<Map.Entry<TK1, TV1>>, StreamStage<Map.Entry<TK2, TV2>>> mapAsync(

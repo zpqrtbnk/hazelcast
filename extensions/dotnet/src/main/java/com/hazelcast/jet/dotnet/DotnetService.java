@@ -65,6 +65,12 @@ public final class DotnetService {
         //   must ensure we always return the pipe to the hub, no matter what
         //   and, properly report exceptions that would occur in the futures
 
+        // TODO: make it async so we can have fewer pipes than //
+//        return dotnetHub.getPipeX()
+//                .thenCompose(pipe -> pipe.write(requestMessage))
+//                .thenCompose(x -> pipe.read()) // should pass the pipe along for returning it + handle errors
+//                .thenApply(responseMessage -> null);
+
         return pipe
                 .write(requestMessage)
                 .thenCompose(x -> pipe.read())

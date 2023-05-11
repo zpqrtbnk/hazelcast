@@ -45,13 +45,20 @@ final class SystemExtensions {
 
     // gets the current platform
     public static String getPlatform() {
-        String platform =
-                OsHelper.isWindows() ? "win-x64" :
-                OsHelper.isLinux() ? "linux-x64" :
-                OsHelper.isMac() ? "osx-x64" :
-                //OsHelper.isUnixFamily() ? "unknown" :
-                "unknown";
 
-        return platform;
+        // note: missing other OS (solaris...) here
+        String os =
+                OsHelper.isWindows() ? "win" :
+                OsHelper.isLinux() ? "linux" :
+                OsHelper.isMac() ? "osx" :
+                "any";
+
+        // note: missing other archs (aarch64, ppc...) here
+        String arch = System.getProperty("os.arch");
+        if (arch.equals("amd64")) arch = "x64";
+        if (arch.equals("x86_32")) arch = "x86";
+        if (arch.equals("x86_64")) arch = "x64";
+
+        return os + "-" + arch;
     }
 }
