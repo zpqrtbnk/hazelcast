@@ -56,6 +56,7 @@ public final class DotnetHub {
         //  periodically (?) verify that the process is active, else tear down
 
         startProcess();
+        // FIXME we really should wait for the process to notify that it's OK or have a way to fail
         openPipes();
     }
 

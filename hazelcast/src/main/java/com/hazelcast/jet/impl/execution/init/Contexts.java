@@ -311,7 +311,9 @@ public final class Contexts {
         }
 
         private File extractFileToDisk(@Nonnull String id, @Nullable File destFile) {
+            System.out.println("resources map = " + jobResourcesMapName(jobId()));
             IMap<String, byte[]> map = hazelcastInstance().getMap(jobResourcesMapName(jobId()));
+            System.out.println("file key name = " + fileKeyName(id));
             try (IMapInputStream inputStream = new IMapInputStream(map, fileKeyName(id))) {
                 Path destPath = (destFile == null)
                     ? Files.createTempDirectory(tempDirPrefix(hazelcastInstance().getName(), idToString(jobId()), id))

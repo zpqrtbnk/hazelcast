@@ -26,14 +26,14 @@ findScriptDir
 
 if [ -z "$LOGGING_CONFIG" ]; then
   # Use the default log4j2 file
-  LOGGING_CONFIG="file:$HAZELCAST_HOME/config/log4j2.properties"
+  LOGGING_CONFIG="$HAZELCAST_HOME/config/log4j2.properties"
 else
   if [ -f "$LOGGING_CONFIG" ]; then
     # Try if the file exists - either absolute or relative path
-    LOGGING_CONFIG="file:$LOGGING_CONFIG"
+    LOGGING_CONFIG="$LOGGING_CONFIG"
   elif [ -f "$HAZELCAST_HOME/config/$LOGGING_CONFIG" ]; then
     # Try file in the config directory
-    LOGGING_CONFIG="file:$HAZELCAST_HOME/config/$LOGGING_CONFIG"
+    LOGGING_CONFIG="$HAZELCAST_HOME/config/$LOGGING_CONFIG"
   else
     echo "Could not find specified LOGGING_CONFIG file."
     exit 1
@@ -89,7 +89,7 @@ fi
 JAVA_OPTS_ARRAY=(\
 $JDK_OPTS \
 "-Dhazelcast.logging.type=log4j2" \
-"-Dlog4j.configurationFile=$LOGGING_CONFIG" \
+"-Dlog4j2.configurationFile=$LOGGING_CONFIG" \
 "-Dhazelcast.config=$HAZELCAST_CONFIG" \
 "-Djet.custom.lib.dir=$JET_CUSTOM_LIB_DIR" \
 $PROMETHEUS \

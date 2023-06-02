@@ -18,26 +18,7 @@ package com.hazelcast.jet.impl.client.protocol.task;
 
 import com.hazelcast.client.impl.protocol.MessageTaskFactory;
 import com.hazelcast.client.impl.protocol.MessageTaskFactoryProvider;
-import com.hazelcast.client.impl.protocol.codec.JetAddJobStatusListenerCodec;
-import com.hazelcast.client.impl.protocol.codec.JetExistsDistributedObjectCodec;
-import com.hazelcast.client.impl.protocol.codec.JetExportSnapshotCodec;
-import com.hazelcast.client.impl.protocol.codec.JetGetJobAndSqlSummaryListCodec;
-import com.hazelcast.client.impl.protocol.codec.JetGetJobConfigCodec;
-import com.hazelcast.client.impl.protocol.codec.JetGetJobIdsCodec;
-import com.hazelcast.client.impl.protocol.codec.JetGetJobMetricsCodec;
-import com.hazelcast.client.impl.protocol.codec.JetGetJobStatusCodec;
-import com.hazelcast.client.impl.protocol.codec.JetGetJobSubmissionTimeCodec;
-import com.hazelcast.client.impl.protocol.codec.JetGetJobSummaryListCodec;
-import com.hazelcast.client.impl.protocol.codec.JetGetJobSuspensionCauseCodec;
-import com.hazelcast.client.impl.protocol.codec.JetIsJobUserCancelledCodec;
-import com.hazelcast.client.impl.protocol.codec.JetJoinSubmittedJobCodec;
-import com.hazelcast.client.impl.protocol.codec.JetRemoveJobStatusListenerCodec;
-import com.hazelcast.client.impl.protocol.codec.JetResumeJobCodec;
-import com.hazelcast.client.impl.protocol.codec.JetSubmitJobCodec;
-import com.hazelcast.client.impl.protocol.codec.JetTerminateJobCodec;
-import com.hazelcast.client.impl.protocol.codec.JetUpdateJobConfigCodec;
-import com.hazelcast.client.impl.protocol.codec.JetUploadJobMetaDataCodec;
-import com.hazelcast.client.impl.protocol.codec.JetUploadJobMultipartCodec;
+import com.hazelcast.client.impl.protocol.codec.*;
 import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.util.collection.Int2ObjectHashMap;
 import com.hazelcast.spi.impl.NodeEngine;
@@ -55,6 +36,8 @@ public class JetMessageTaskFactoryProvider implements MessageTaskFactoryProvider
     public void initFactories() {
         factories.put(JetSubmitJobCodec.REQUEST_MESSAGE_TYPE,
                 (cm, con) -> new JetSubmitJobMessageTask(cm, node, con));
+        factories.put(JetSubmitYamlJobCodec.REQUEST_MESSAGE_TYPE,
+                (cm, con) -> new JetSubmitYamlJobMessageTask(cm, node, con));
         factories.put(JetTerminateJobCodec.REQUEST_MESSAGE_TYPE,
                 (cm, con) -> new JetTerminateJobMessageTask(cm, node, con));
         factories.put(JetGetJobStatusCodec.REQUEST_MESSAGE_TYPE,

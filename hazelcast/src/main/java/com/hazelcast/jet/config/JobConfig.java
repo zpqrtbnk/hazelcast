@@ -1175,7 +1175,7 @@ public class JobConfig implements IdentifiedDataSerializable {
         resourceConfigs.put(cfg.getId(), cfg);
     }
 
-    private JobConfig add(@Nonnull URL url, @Nonnull String id, @Nonnull ResourceType resourceType) {
+    public JobConfig add(@Nonnull URL url, @Nonnull String id, @Nonnull ResourceType resourceType) {
         throwIfLocked();
         Preconditions.checkHasText(id, "Resource ID is blank");
         ResourceConfig cfg = new ResourceConfig(url, id, resourceType);

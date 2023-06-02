@@ -44,7 +44,9 @@ public final class DotnetServiceContext {
         for (String e : resources.keySet()) s += " " + e;
         logger.info(s);
 
-        runtimeDir = processorContext.recreateAttachedDirectory(config.getDotnetDirId(platform));
+        String directoryId = config.getDotnetDirId(platform);
+        logger.info("Restore directory " + directoryId);
+        runtimeDir = processorContext.recreateAttachedDirectory(directoryId);
     }
 
     // gets the processor context
