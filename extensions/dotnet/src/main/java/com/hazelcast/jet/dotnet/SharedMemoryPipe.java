@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -14,10 +15,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 // represents a shared memory based pipe
-public final class ShmPipe implements IJetPipe {
+public final class SharedMemoryPipe implements IJetPipe {
 
     private final static int SizeOfInt = Integer.BYTES;
-    private final ShmPipeMonitor monitor;
+    private final SharedMemoryPipeMonitor monitor;
 
     private final int outWpOffset;
     private final int outRpOffset;
@@ -38,18 +39,18 @@ public final class ShmPipe implements IJetPipe {
 
     private int inrp, outwp;
 
-    public ShmPipe(boolean isOwner) throws IOException, IllegalArgumentException {
+    public SharedMemoryPipe(boolean isOwner) throws IOException, IllegalArgumentException {
 
         this(isOwner, null, null, 1024, 500);
     }
 
-    public ShmPipe(boolean isOwner, String filename, String uid, int dataCapacity, int spinDelayMilliseconds) throws IOException, IllegalArgumentException {
+    public SharedMemoryPipe(boolean isOwner, String filename, String uid, int dataCapacity, int spinDelayMilliseconds) throws IOException, IllegalArgumentException {
 
         if (isOwner) throw new IllegalArgumentException("Owner mode not supported.");
 
         this.capacity = dataCapacity;
         this.spinDelay = spinDelayMilliseconds;
-        this.monitor = new ShmPipeMonitor(this, spinDelay);
+        this.monitor = new SharedMemoryPipeMonitor(this, spinDelay);
 
         // total size
         int size = 4 * SizeOfInt + 2 * dataCapacity;
@@ -132,6 +133,7 @@ public final class ShmPipe implements IJetPipe {
         int outrp = getInt(outRpOffset);
 
         // write
+        writeString(message.getTransformName(), outrp);
         writeInteger(message.getOperationId(), outrp);
         if (message.getOperationId() >= 0) {
             writeInteger(message.getBuffers().length, outrp);
@@ -164,6 +166,7 @@ public final class ShmPipe implements IJetPipe {
         int inwp = getInt(inWpOffset);
 
         // read
+        String transformName = readString(inwp);
         int id = readInteger(inwp);
         JetMessage message;
         if (id >= 0)
@@ -171,7 +174,7 @@ public final class ShmPipe implements IJetPipe {
             int count = readInteger(inwp);
             byte[][] buffers = new byte[count][];
             for (int i = 0; i < count; i++) buffers[i] = read(inwp);
-            message = new JetMessage(id, buffers);
+            message = new JetMessage(transformName, id, buffers);
         }
         else
         {
@@ -211,6 +214,12 @@ public final class ShmPipe implements IJetPipe {
 
         writeInteger(buffer.length, outrp);
         if (buffer.length > 0) writeBytes(buffer, outrp);
+    }
+
+    private void writeString(String value, int outrp) {
+
+        byte[] buffer = value.getBytes(StandardCharsets.US_ASCII);
+        write(buffer, outrp);
     }
 
     private void writeInteger(int value, int outrp) {
@@ -254,6 +263,12 @@ public final class ShmPipe implements IJetPipe {
         byte[] buffer = new byte[bufferLength];
         if (bufferLength > 0) readBytes(buffer, inwp);
         return buffer;
+    }
+
+    private String readString(int inwp) {
+
+        byte[] buffer = read(inwp);
+        return buffer.length == 0 ? "" : new String(buffer, StandardCharsets.US_ASCII);
     }
 
     private int readInteger(int inwp) {

@@ -31,7 +31,7 @@ public final class DotnetTransforms {
 
         return s -> s
                 .mapUsingServiceAsync(dotnetService, maxConcurrentOps, preserveOrder, DotnetService::<TInput, TResult>mapAsync0)
-                .setName(config.getMethodName());
+                .setName(config.getTransformName());
     }
 
     /*
@@ -86,6 +86,6 @@ public final class DotnetTransforms {
 
         return s -> s
                 .mapUsingServiceAsync(serviceFactory, maxConcurrentOps, preserveOrder, mapAsyncFn)
-                .setName(config.getMethodName());
+                .setName(config.getTransformName());
     }
 }

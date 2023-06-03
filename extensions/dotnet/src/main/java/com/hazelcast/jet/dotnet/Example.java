@@ -1,13 +1,8 @@
 package com.hazelcast.jet.dotnet;
 
 import com.hazelcast.core.Hazelcast;
-import com.hazelcast.internal.journal.DeserializingEntry;
-import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.*;
-
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 // TODO:
 //   an example class that submits an example job
@@ -29,7 +24,7 @@ public class Example {
         DotnetServiceConfig config = DotnetSubmit.getConfig(args)
                 .withParallelism(parallelProcessors, parallelOperations)
                 .withPreserveOrder(preserveOrder)
-                .withMethodName(methodName);
+                .withTransformName(methodName);
 
         // create and define the pipeline
         Pipeline pipeline = Pipeline.create();

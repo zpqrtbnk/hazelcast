@@ -2,11 +2,8 @@ package com.hazelcast.jet.dotnet;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.MapConfig;
-import com.hazelcast.function.BiFunctionEx;
-import com.hazelcast.function.FunctionEx;
 import com.hazelcast.internal.journal.DeserializingEntry;
 import com.hazelcast.internal.serialization.Data;
-import com.hazelcast.internal.serialization.impl.ByteArrayObjectDataOutput;
 import com.hazelcast.internal.util.OsHelper;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
@@ -32,7 +29,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
 
@@ -132,7 +128,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
                 // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
                 .withParallelism(4, 4)
                 .withPreserveOrder(true)
-                .withMethodName(methodName);
+                .withTransformName(methodName);
 
         // gather the expected results
         List<String> expected = items.stream().map(i -> "__" + i + "__").collect(toList());
@@ -175,7 +171,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
                 // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
                 .withParallelism(4, 4)
                 .withPreserveOrder(true)
-                .withMethodName(methodName);
+                .withTransformName(methodName);
 
         // we're going to work with a map journal source
         // the journal is activated in the member config (see top of this file)
@@ -260,7 +256,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
                 // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
                 .withParallelism(4, 4)
                 .withPreserveOrder(true)
-                .withMethodName("doThingDotnet");
+                .withTransformName("doThingDotnet");
 
         // we're going to work with a map journal source
         // the journal is activated in the member config (see top of this file)
@@ -347,7 +343,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
                 // 4 processors per member, 4 operations per processor, the dotnet hub will open 16 channels
                 .withParallelism(4, 4)
                 .withPreserveOrder(true)
-                .withMethodName("doThingDotnet");
+                .withTransformName("doThingDotnet");
 
         // we're going to work with a map journal source
         // the journal is activated in the member config (see top of this file)

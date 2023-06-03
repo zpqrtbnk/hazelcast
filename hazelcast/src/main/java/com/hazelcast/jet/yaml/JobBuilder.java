@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008-2023, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hazelcast.jet.yaml;
 
 import com.hazelcast.internal.yaml.*;
@@ -11,6 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.ServiceLoader;
 
+// builds jobs
 public final class JobBuilder {
 
     private static final Map<String, JobBuilderFunction4<Pipeline, String, YamlMapping, ILogger, Object>> sources = new HashMap<>();
@@ -38,8 +55,8 @@ public final class JobBuilder {
                 sources.put("map-journal", JobBuilder::sourceMapJournal);
                 sinks.put("map", JobBuilder::sinkMap);
 
-                ServiceLoader<JetExtension> extensions = ServiceLoader.load(JetExtension.class);
-                for (JetExtension extension : extensions) {
+                ServiceLoader<JobBuilderExtension> extensions = ServiceLoader.load(JobBuilderExtension.class);
+                for (JobBuilderExtension extension : extensions) {
                     logger.fine("register extension: " + extension);
                     extension.register(this);
                 }
@@ -51,14 +68,17 @@ public final class JobBuilder {
         transforms.put(name, f);
     }
 
+    // gets the job pipeline
     public Pipeline getPipeline() {
         return pipeline;
     }
 
+    // gets the job configuration
     public JobConfig getConfig() {
         return jobConfig;
     }
 
+    // parses Yaml content and creates the job pipeline and configuration
     public void parse(YamlNode root) throws JobBuilderException {
 
         if (!(root instanceof YamlMapping)) throw new JobBuilderException("panic");

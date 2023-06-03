@@ -43,10 +43,9 @@ public final class DotnetHub {
         this.logger = serviceContext.getLogger();
 
         String pipeName = serviceContext.getPipeName();
-        String methodName = config.getMethodName();
         String instanceName = serviceContext.getInstanceName();
 
-        logger.fine("DotnetHub starting, running " + methodName + " for " + instanceName + " over " + pipeName);
+        logger.fine("DotnetHub starting, running for " + instanceName + " over " + pipeName);
 
         pipes = new ConcurrentLinkedQueue<>();
 
@@ -64,7 +63,6 @@ public final class DotnetHub {
     private void startProcess() throws IOException {
 
         String pipeName = serviceContext.getPipeName();
-        String methodName = config.getMethodName();
         String instanceName = serviceContext.getInstanceName();
 
         // the process accepts three parameters
@@ -106,7 +104,7 @@ public final class DotnetHub {
         }
 
         int pipesCount = config.getLocalParallelism() * config.getMaxConcurrentOps();
-        ProcessBuilder builder = new ProcessBuilder(dotnetExe, pipeName, Integer.toString(pipesCount), methodName);
+        ProcessBuilder builder = new ProcessBuilder(dotnetExe, pipeName, Integer.toString(pipesCount));
 
         dotnetProcess = builder
                 .directory(runtimeDir)
@@ -115,7 +113,7 @@ public final class DotnetHub {
 
         dotnetProcessId = SystemExtensions.processPid(dotnetProcess);
         stdoutLoggingThread = SystemExtensions.logStdOut(dotnetProcess, logger);
-        logger.fine("DotnetHub [" + dotnetProcessId + "] started, running " + methodName + " for " + instanceName + " over " + pipeName);
+        logger.fine("DotnetHub [" + dotnetProcessId + "] started, running for " + instanceName + " over " + pipeName);
     }
 
     // stops the dotnet process
@@ -205,7 +203,7 @@ public final class DotnetHub {
         String pipeName = serviceContext.getPipeName();
 
         for (int i = 0; i < pipesCount; i++)
-            pipes.add(new ShmPipe(false, null, pipeName + "-" + i, DATA_CAPACITY, SPIN_DELAY));
+            pipes.add(new SharedMemoryPipe(false, null, pipeName + "-" + i, DATA_CAPACITY, SPIN_DELAY));
 
         logger.fine("DotnetHub [" + dotnetProcessId + "] opened " + pipes.size() + " pipes");
     }

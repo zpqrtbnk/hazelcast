@@ -34,7 +34,7 @@ public final class Transforms {
                 buffers[0][i] = (byte)(tmp & 255);
                 tmp >>= 8;
             }
-            JetMessage message = new JetMessage(0, buffers);
+            JetMessage message = new JetMessage("toStringDotnet",0, buffers);
             context.getLogger().info("Send " + input);
 
             return pipe
@@ -96,7 +96,7 @@ public final class Transforms {
             byte[][] buffers = new byte[2][];
             buffers[0] = DeserializingEntryExtensions.getDataKey(entry).toByteArray();
             buffers[1] = DeserializingEntryExtensions.getDataValue(entry).toByteArray();
-            JetMessage message = new JetMessage(0, buffers);
+            JetMessage message = new JetMessage("doThingDotnet", 0, buffers);
 
             return pipe
                     .write(message)

@@ -2,17 +2,9 @@ package com.hazelcast.jet.dotnet;
 
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.ServiceFactory;
-import com.hazelcast.logging.Logger;
 
 import java.io.File;
-import java.io.FilenameFilter;
-import java.io.IOException;
 import java.io.Serializable;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.UUID;
-import java.util.stream.Stream;
 
 // configures the dotnet service
 public final class DotnetServiceConfig implements Serializable {
@@ -24,12 +16,12 @@ public final class DotnetServiceConfig implements Serializable {
     private String jobName;
     private String dotnetDir;
     private String dotnetExe;
-    private String methodName;
+    private String transformName;
     private int maxConcurrentOps = 1;
     private int localParallelism = 1;
     private boolean preserveOrder = true;
 
-    // name of the job
+    // name of the job -- KILL
     public String getJobName() {
 
         return jobName;
@@ -44,7 +36,7 @@ public final class DotnetServiceConfig implements Serializable {
         return this;
     }
 
-    // path to the directory containing the dotnet executables
+    // path to the directory containing the dotnet executables -- KILL
     public String getDotnetDir() {
 
         return dotnetDir;
@@ -79,17 +71,17 @@ public final class DotnetServiceConfig implements Serializable {
     }
 
     // name of the method that the dotnet executable should execute
-    public String getMethodName() {
+    public String getTransformName() {
 
-        return methodName;
+        return transformName;
     }
-    public void setMethodName(String name) {
+    public void setTransformName(String name) {
 
-        methodName = name;
+        transformName = name;
     }
-    public DotnetServiceConfig withMethodName(String name) {
+    public DotnetServiceConfig withTransformName(String name) {
 
-        setMethodName(name);
+        setTransformName(name);
         return this;
     }
 
@@ -146,7 +138,7 @@ public final class DotnetServiceConfig implements Serializable {
         return this;
     }
 
-    public void configureJob(JobConfig jobConfig) {
+    public void configureJob(JobConfig jobConfig) { // -- KILL
 
         jobConfig.setName(jobName);
 

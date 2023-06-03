@@ -16,10 +16,9 @@
 
 package com.hazelcast.jet.yaml;
 
-// a consumer accepting four parameters, that can throw a JobBuilderException
-@FunctionalInterface
-public interface JobBuilderConsumer4<T, U, V, W> {
+// define an extension that will register methods with the JobBuilder
+public interface JobBuilderExtension {
 
-    // accepts parameters
-    void accept(T t, U u, V v, W w) throws JobBuilderException;
+    // registers methods with the JobBuilder
+    void register(JobBuilder jobBuilder);
 }

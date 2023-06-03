@@ -3,10 +3,10 @@ package com.hazelcast.jet.dotnet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-public final class ShmPipeMonitor {
+public final class SharedMemoryPipeMonitor {
 
     private final Thread thread;
-    private final ShmPipe pipe;
+    private final SharedMemoryPipe pipe;
     private boolean running;
     private int spinDelay;
     private CompletableFuture<Void> readFuture;
@@ -49,7 +49,7 @@ public final class ShmPipeMonitor {
     }
 
     // initializes a new monitor
-    public ShmPipeMonitor(ShmPipe pipe, int spinDelay) {
+    public SharedMemoryPipeMonitor(SharedMemoryPipe pipe, int spinDelay) {
 
         this.pipe = pipe;
         this.spinDelay = spinDelay;

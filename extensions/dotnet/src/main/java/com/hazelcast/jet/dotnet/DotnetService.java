@@ -7,12 +7,14 @@ import com.hazelcast.internal.serialization.impl.HeapData;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 // provides the dotnet service
 public final class DotnetService {
 
     private final DotnetServiceContext serviceContext;
     private final DotnetHub dotnetHub;
+    private final String transformName;
 
     // initializes a new dotnet service
     DotnetService(DotnetServiceContext serviceContext) throws IOException {
@@ -22,13 +24,15 @@ public final class DotnetService {
 
         String instanceName = serviceContext.getInstanceName();
         serviceContext.getLogger().fine("DotnetService created for " + instanceName);
+
+        transformName = serviceContext.getConfig().getTransformName();
     }
 
     // FIXME temp test code that will be removed, eventually
     <TInput, TResult> CompletableFuture<TResult> mapAsync0(TInput input) {
 
         DotnetServiceConfig config = serviceContext.getConfig();
-        String methodName = config.getMethodName();
+        String methodName = config.getTransformName();
 
         if (methodName.equals("toStringJava"))
             return (CompletableFuture<TResult>) Transforms.toStringJava((int) input, serviceContext);
@@ -59,7 +63,8 @@ public final class DotnetService {
 
         byte[][] requestBuffers = new byte[input.length][];
         for (int i = 0; i < input.length; i++) requestBuffers[i] = input[i].toByteArray();
-        JetMessage requestMessage = new JetMessage(0, requestBuffers);
+        // FIXME assign operation IDs
+        JetMessage requestMessage = new JetMessage(transformName, 0, requestBuffers);
 
         // FIXME we are missing some error-handling cases
         //   must ensure we always return the pipe to the hub, no matter what
@@ -76,9 +81,13 @@ public final class DotnetService {
                 .thenCompose(x -> pipe.read())
                 .thenApply(responseMessage -> {
                     dotnetHub.returnPipe(pipe);
+                    serviceContext.getLogger().fine("T='" + responseMessage.getTransformName() + "'"); // FIXME temp
                     byte[][] responseBuffers = responseMessage.getBuffers();
                     Data[] data = new Data[responseBuffers.length];
                     for (int i = 0; i < data.length; i++) data[i] = new HeapData(responseBuffers[i]);
+                    if (responseMessage.isException()) {
+                        throw new CompletionException(new Exception("Remote call failed, check log."));
+                    }
                     return data;
                 });
     }
