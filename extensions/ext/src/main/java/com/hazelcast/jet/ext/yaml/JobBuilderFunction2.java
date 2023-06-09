@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.yaml;
+package com.hazelcast.jet.ext.yaml;
 
-// a consumer accepting two parameters, that can throw a JobBuilderException
+// a function accepting two parameters, that can throw a JobBuilderException
 @FunctionalInterface
-public interface JobBuilderConsumer2<T, U> {
+public interface JobBuilderFunction2<T, U, R> {
 
-    // accepts parameters
-    void accept(T t, U u) throws JobBuilderException;
+    // applies the function to the parameters and returns the result
+    R apply(T t, U u) throws JobBuilderException;
 }
 

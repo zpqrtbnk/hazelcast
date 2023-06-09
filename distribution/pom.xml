@@ -368,12 +368,6 @@
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-dotnet</artifactId>
-            <version>${project.version}</version>
-            <classifier>${fat.dependency.classifier}</classifier>
-        </dependency>
-        <dependency>
-            <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-s3</artifactId>
             <version>${project.version}</version>
             <classifier>${fat.dependency.classifier}</classifier>
@@ -409,6 +403,18 @@
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-dotnet</artifactId>
+            <version>${project.version}</version>
+            <classifier>${fat.dependency.classifier}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-ext</artifactId>
+            <version>${project.version}</version>
+            <classifier>${fat.dependency.classifier}</classifier>
         </dependency>
     </dependencies>
 </project>

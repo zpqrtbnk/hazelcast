@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.yaml;
+package com.hazelcast.jet.ext.yaml;
 
-// define an extension that will register methods with the JobBuilder
-public interface JobBuilderExtension {
+// represents the exception throws by the JobBuilder when it fails to build a job
+public final class JobBuilderException extends Exception {
 
-    // registers methods with the JobBuilder
-    void register(JobBuilder jobBuilder);
+    public JobBuilderException(String message) {
+
+        super(message);
+    }
 }

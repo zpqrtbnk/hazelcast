@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.yaml;
+package com.hazelcast.jet.ext.yaml;
 
 import com.hazelcast.internal.yaml.*;
 import com.hazelcast.jet.config.JobConfig;
@@ -51,9 +51,10 @@ public final class JobBuilder {
 
             if (sources.isEmpty()) {
 
-                // FIXME: everything should be injected
-                sources.put("map-journal", JobBuilder::sourceMapJournal);
-                sinks.put("map", JobBuilder::sinkMap);
+                // service loader ignores these
+                new YamlSources().register(this);
+                new YamlSinks().register(this);
+                new YamlTransforms().register(this);
 
                 ServiceLoader<JobBuilderExtension> extensions = ServiceLoader.load(JobBuilderExtension.class);
                 for (JobBuilderExtension extension : extensions) {
@@ -64,8 +65,19 @@ public final class JobBuilder {
         }
     }
 
-    public void addTransform(String name, JobBuilderFunction4<Object, String, YamlMapping, ILogger, Object> f) {
+    public void registerTransform(String name, JobBuilderFunction4<Object, String, YamlMapping, ILogger, Object> f) {
+
         transforms.put(name, f);
+    }
+
+    public void registerSource(String name, JobBuilderFunction4<Pipeline, String, YamlMapping, ILogger, Object> f) {
+
+        sources.put(name, f);
+    }
+
+    public void registerSink(String name, JobBuilderConsumer4<Object, String, YamlMapping, ILogger> f) {
+
+        sinks.put(name, f);
     }
 
     // gets the job pipeline
@@ -207,20 +219,6 @@ public final class JobBuilder {
     // StreamSourceStage i
     //   StreamSourceStageImpl
 
-    private static Object sourceMapJournal(Pipeline pipelineContext, String name, YamlMapping properties, ILogger logger) throws JobBuilderException {
-
-        String mapName = YamlUtils.getProperty(properties, "map-name");
-        String initialPositionString = YamlUtils.getProperty(properties, "journal-initial-position");
-        //JournalInitialPosition initialPosition = getProperty(properties, "journal-initial-position");
-        JournalInitialPosition initialPosition = JournalInitialPosition.valueOf(initialPositionString);
-        logger.fine("  map-name: " + mapName);
-        logger.fine("  initial-position: " + initialPosition);
-        StreamSource source = Sources.mapJournal(mapName, initialPosition);
-        if (source == null) logger.fine("MEH source");
-        if (pipelineContext == null) logger.fine("MEH pipelineContext"); // FIXME this! on the second call = ?!
-        return pipelineContext.readFrom(source);
-    }
-
     private void addSource(String name, YamlMapping properties) throws JobBuilderException {
         logger.fine("add source: " + name);
         if (pipelineContext == null || stageContext != null) {
@@ -232,19 +230,6 @@ public final class JobBuilder {
         }
         stageContext = f.apply(pipelineContext, name, properties, logger);
         pipelineContext = null;
-    }
-
-    private static void sinkMap(Object stageContext, String name, YamlMapping properties, ILogger logger) throws JobBuilderException {
-
-        String mapName = YamlUtils.getProperty(properties, "map-name");
-        logger.fine("  map-name: " + mapName);
-        if (stageContext instanceof GeneralStage) {
-            // FIXME how can we check?
-            ((GeneralStage)stageContext).writeTo(Sinks.map(mapName));
-        }
-        else {
-            throw new JobBuilderException("panic");
-        }
     }
 
     private void addSink(String name, YamlMapping properties) throws JobBuilderException {

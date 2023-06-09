@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.yaml;
+package com.hazelcast.jet.ext.yaml;
 
-// a function accepting two parameters, that can throw a JobBuilderException
-@FunctionalInterface
-public interface JobBuilderFunction2<T, U, R> {
+// define an extension that will register methods with the JobBuilder
+public interface JobBuilderExtension {
 
-    // applies the function to the parameters and returns the result
-    R apply(T t, U u) throws JobBuilderException;
+    // registers methods with the JobBuilder
+    void register(JobBuilder jobBuilder);
 }
-

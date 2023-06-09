@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.yaml;
+package com.hazelcast.jet.ext.yaml;
 
 // a consumer accepting four parameters, that can throw a JobBuilderException
 @FunctionalInterface

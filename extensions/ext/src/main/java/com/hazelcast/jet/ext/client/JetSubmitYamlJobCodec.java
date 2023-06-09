@@ -1,4 +1,4 @@
-package com.hazelcast.client.impl.protocol.codec;
+package com.hazelcast.jet.ext.client;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.builtin.StringCodec;

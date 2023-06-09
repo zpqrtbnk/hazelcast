@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.client.protocol.task;
+package com.hazelcast.jet.ext.client;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
-import com.hazelcast.client.impl.protocol.codec.JetSubmitYamlJobCodec;
 import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.jet.impl.operation.SubmitJobOperation;
-import com.hazelcast.jet.yaml.JobBuilder;
-import com.hazelcast.jet.yaml.JobBuilderException;
+import com.hazelcast.jet.ext.yaml.JobBuilder;
+import com.hazelcast.jet.ext.yaml.JobBuilderException;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.security.permission.ActionConstants;
 import com.hazelcast.spi.impl.operationservice.Operation;
