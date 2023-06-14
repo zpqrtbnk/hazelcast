@@ -5,7 +5,7 @@ import com.hazelcast.internal.yaml.YamlNode;
 import com.hazelcast.jet.impl.deployment.IMapInputStream;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.pipeline.*;
-import com.hazelcast.jet.yaml.JobBuilder;
+import com.hazelcast.jet.ext.yaml.JobBuilder;
 import org.junit.Test;
 
 import java.io.FileInputStream;

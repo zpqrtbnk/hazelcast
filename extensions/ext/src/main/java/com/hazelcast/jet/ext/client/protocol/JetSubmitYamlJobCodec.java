@@ -1,4 +1,4 @@
-package com.hazelcast.jet.ext.client;
+package com.hazelcast.jet.ext.client.protocol;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.builtin.StringCodec;
@@ -10,10 +10,8 @@ import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCod
 
 public final class JetSubmitYamlJobCodec {
 
-    //hex: 0xFE0102
-    public static final int REQUEST_MESSAGE_TYPE = 16646402;
-    //hex: 0xFE0103
-    public static final int RESPONSE_MESSAGE_TYPE = 16646403;
+    public static final int REQUEST_MESSAGE_TYPE = 16646402; //hex: 0xFE0102
+    public static final int RESPONSE_MESSAGE_TYPE = 16646403; //hex: 0xFE0103
     private static final int REQUEST_JOB_ID_FIELD_OFFSET = PARTITION_ID_FIELD_OFFSET + INT_SIZE_IN_BYTES;
     private static final int REQUEST_DRYRUN_FIELD_OFFSET = REQUEST_JOB_ID_FIELD_OFFSET + LONG_SIZE_IN_BYTES;
     private static final int REQUEST_INITIAL_FRAME_SIZE = REQUEST_DRYRUN_FIELD_OFFSET + BOOLEAN_SIZE_IN_BYTES;

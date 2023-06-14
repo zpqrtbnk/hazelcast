@@ -5,17 +5,18 @@ import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.yaml.YamlMapping;
 import com.hazelcast.jet.pipeline.StreamSourceStage;
 import com.hazelcast.jet.pipeline.StreamStage;
-import com.hazelcast.jet.yaml.JobBuilderExtension;
-import com.hazelcast.jet.yaml.JobBuilder;
-import com.hazelcast.jet.yaml.JobBuilderException;
-import com.hazelcast.jet.yaml.YamlUtils;
+import com.hazelcast.jet.ext.yaml.JobBuilderExtension;
+import com.hazelcast.jet.ext.yaml.JobBuilder;
+import com.hazelcast.jet.ext.yaml.JobBuilderException;
+import com.hazelcast.jet.ext.yaml.YamlUtils;
 import com.hazelcast.logging.ILogger;
 
 public class DotnetJetExtension implements JobBuilderExtension {
 
     @Override
     public void register(JobBuilder jobBuilder) {
-        jobBuilder.addTransform("dotnet", DotnetJetExtension::transformDotnet);
+
+        jobBuilder.registerTransform("dotnet", DotnetJetExtension::transformDotnet);
     }
 
     private static Object transformDotnet(Object stageContext, String name, YamlMapping properties, ILogger logger) throws JobBuilderException {

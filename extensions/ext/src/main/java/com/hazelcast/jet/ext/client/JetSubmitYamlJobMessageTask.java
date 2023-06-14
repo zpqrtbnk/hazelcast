@@ -20,6 +20,7 @@ import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.internal.serialization.Data;
+import com.hazelcast.jet.ext.client.protocol.JetSubmitYamlJobCodec;
 import com.hazelcast.jet.impl.operation.SubmitJobOperation;
 import com.hazelcast.jet.ext.yaml.JobBuilder;
 import com.hazelcast.jet.ext.yaml.JobBuilderException;
