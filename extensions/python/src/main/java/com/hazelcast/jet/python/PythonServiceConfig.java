@@ -17,6 +17,7 @@ package com.hazelcast.jet.python;
 
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.internal.util.Preconditions;
+import com.hazelcast.jet.ext.JetServiceConfigurationException;
 import com.hazelcast.jet.pipeline.GeneralStage;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
@@ -134,7 +135,7 @@ public class PythonServiceConfig implements Serializable {
             missingMandatoryFields.add("channelFn");
         }
         if (missingMandatoryFields.length() > 0) {
-            throw new InvalidPythonServiceConfigException("The supplied Python Service configuration is missing these " +
+            throw new JetServiceConfigurationException("The supplied Python Service configuration is missing these " +
                     "mandatory fields: " + missingMandatoryFields);
         }
     }
@@ -171,7 +172,7 @@ public class PythonServiceConfig implements Serializable {
             }
             this.baseDir = dir;
         } catch (IOException e) {
-            throw new InvalidPythonServiceConfigException("Invalid baseDir argument", e);
+            throw new JetServiceConfigurationException("Invalid baseDir argument", e);
         }
         return this;
     }
@@ -212,7 +213,7 @@ public class PythonServiceConfig implements Serializable {
             this.handlerFile = file;
             this.handlerModule = file.getName().replaceFirst("\\.py$", "");
         } catch (IOException e) {
-            throw new InvalidPythonServiceConfigException("Invalid handlerFile argument", e);
+            throw new JetServiceConfigurationException("Invalid handlerFile argument", e);
         }
         return this;
     }

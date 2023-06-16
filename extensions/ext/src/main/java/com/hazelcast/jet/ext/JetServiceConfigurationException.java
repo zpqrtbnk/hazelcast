@@ -13,19 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.hazelcast.jet.python;
+package com.hazelcast.jet.ext;
 
 import com.hazelcast.jet.JetException;
 
-class InvalidPythonServiceConfigException extends JetException {
+// represents the exception that is thrown when a Jet service configuration is invalid
+public class JetServiceConfigurationException extends JetException {
 
     private static final long serialVersionUID = 1L;
 
-    InvalidPythonServiceConfigException(String message) {
+    public JetServiceConfigurationException(String message) {
         super(message);
     }
 
-    InvalidPythonServiceConfigException(String message, Throwable cause) {
+    public JetServiceConfigurationException(String message, Throwable cause) {
         super(message, cause);
     }
 }

@@ -19,14 +19,16 @@ public class WasmServiceContext {
 
         this.processorContext = processorContext;
         logger = getLogger(getClass().getPackage().getName());
-
-        Map<String, ResourceConfig> resources = processorContext.jobConfig().getResourceConfigs();
-        String s = "RESOURCES: ";
-        for (String e : resources.keySet()) s += " " + e;
-        logger.info(s);
-
-        String directoryId = config.getDotnetDirId(platform);
-        logger.info("Restore directory " + directoryId);
+//
+//        Map<String, ResourceConfig> resources = processorContext.jobConfig().getResourceConfigs();
+//        String s = "RESOURCES: ";
+//        for (String e : resources.keySet()) s += " " + e;
+//        logger.info(s);
+//
+//        String platform = ""; // FIXME
+//        String directoryId = config.getDotnetDirId(platform);
+//        logger.info("Restore directory " + directoryId);
+        String directoryId = "";
         wasmDir = processorContext.recreateAttachedDirectory(directoryId);
     }
 
