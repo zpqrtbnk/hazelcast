@@ -17,8 +17,8 @@ package com.hazelcast.jet.mongodb.impl;
 
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.mongodb.datalink.MongoDataLink;
-import com.hazelcast.jet.pipeline.DataLinkRef;
+import com.hazelcast.jet.mongodb.dataconnection.MongoDataConnection;
+import com.hazelcast.jet.pipeline.DataConnectionRef;
 import com.hazelcast.jet.retry.RetryStrategies;
 import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.jet.retry.impl.RetryTracker;
@@ -52,19 +52,19 @@ class MongoConnection implements Closeable {
                            .build();
 
     private SupplierEx<? extends MongoClient> clientSupplier;
-    private final DataLinkRef dataLinkRef;
+    private final DataConnectionRef dataConnectionRef;
     private final Consumer<MongoClient> afterConnection;
     private final RetryTracker connectionRetryTracker;
     private final ILogger logger = Logger.getLogger(MongoConnection.class);
 
     private MongoClient mongoClient;
-    private MongoDataLink dataLink;
+    private MongoDataConnection dataConnection;
     private Exception lastException;
 
-    MongoConnection(SupplierEx<? extends MongoClient> clientSupplier, DataLinkRef dataLinkRef,
+    MongoConnection(SupplierEx<? extends MongoClient> clientSupplier, DataConnectionRef dataConnectionRef,
                     Consumer<MongoClient> afterConnection) {
         this.clientSupplier = clientSupplier;
-        this.dataLinkRef = dataLinkRef;
+        this.dataConnectionRef = dataConnectionRef;
         this.afterConnection = afterConnection;
         this.connectionRetryTracker = new RetryTracker(RETRY_STRATEGY);
     }
@@ -97,16 +97,16 @@ class MongoConnection implements Closeable {
                 if (codes.contains(new BsonString("NonResumableChangeStreamError"))) {
                     throw new JetException("NonResumableChangeStreamError thrown by Mongo", e);
                 }
-                logger.warning("Could not connect to MongoDB." + willRetryMessage(), e);
                 connectionRetryTracker.attemptFailed();
+                logger.warning("Could not connect to MongoDB." + willRetryMessage(), e);
                 lastException = e;
                 return false;
             } catch (MongoClientException | MongoSocketException e) {
                 lastException = e;
 
+                connectionRetryTracker.attemptFailed();
                 logger.warning("Could not connect to MongoDB due to client/socket error."
                         + willRetryMessage(), e);
-                connectionRetryTracker.attemptFailed();
                 return false;
             } catch (Exception e) {
                 throw new JetException("Cannot connect to MongoDB, seems to be non-transient error", e);
@@ -137,20 +137,21 @@ class MongoConnection implements Closeable {
             mongoClient.close();
             mongoClient = null;
         }
-        if (dataLink != null) {
-            dataLink.release();
-            dataLink = null;
+        if (dataConnection != null) {
+            dataConnection.release();
+            dataConnection = null;
         }
     }
 
     /**
-     * Assembles client supplier - if data link is used, it will set {@link #clientSupplier} to
-     * correct supplier based on the data link.
+     * Assembles client supplier - if data connection is used, it will set {@link #clientSupplier} to
+     * correct supplier based on the data connection.
      */
     public void assembleSupplier(NodeEngineImpl nodeEngine) {
-        if (dataLinkRef != null) {
-            dataLink = nodeEngine.getDataLinkService().getAndRetainDataLink(dataLinkRef.getName(), MongoDataLink.class);
-            clientSupplier = dataLink::getClient;
+        if (dataConnectionRef != null) {
+            dataConnection = nodeEngine.getDataConnectionService().getAndRetainDataConnection(
+                    dataConnectionRef.getName(), MongoDataConnection.class);
+            clientSupplier = dataConnection::getClient;
         }
     }
 }

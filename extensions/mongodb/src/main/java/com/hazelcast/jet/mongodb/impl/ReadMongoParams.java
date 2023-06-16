@@ -19,7 +19,9 @@ import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.EventTimePolicy;
-import com.hazelcast.jet.pipeline.DataLinkRef;
+import com.hazelcast.jet.pipeline.DataConnectionRef;
+import com.hazelcast.security.permission.ActionConstants;
+import com.hazelcast.security.permission.ConnectorPermission;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
 import org.bson.BsonTimestamp;
@@ -35,13 +37,14 @@ import java.util.List;
 import static com.hazelcast.internal.util.Preconditions.checkState;
 import static com.hazelcast.jet.impl.util.Util.checkNonNullAndSerializable;
 import static com.hazelcast.jet.mongodb.impl.Mappers.bsonToDocument;
-import static com.hazelcast.jet.pipeline.DataLinkRef.dataLinkRef;
+import static com.hazelcast.jet.pipeline.DataConnectionRef.dataConnectionRef;
+import static com.hazelcast.security.permission.ConnectorPermission.mongo;
 
 @SuppressWarnings({"UnusedReturnValue", "unused"})
 public class ReadMongoParams<I> implements Serializable {
     final boolean stream;
     SupplierEx<? extends MongoClient> clientSupplier;
-    DataLinkRef dataLinkRef;
+    DataConnectionRef dataConnectionRef;
     String databaseName;
     String collectionName;
     FunctionEx<Document, I> mapItemFn;
@@ -49,6 +52,7 @@ public class ReadMongoParams<I> implements Serializable {
     Long startAtTimestamp;
     EventTimePolicy<? super I> eventTimePolicy;
     BiFunctionEx<ChangeStreamDocument<Document>, Long, I> mapStreamFn;
+    boolean nonDistributed;
     boolean throwOnNonExisting = true;
     private List<Document> aggregates = new ArrayList<>();
 
@@ -61,11 +65,11 @@ public class ReadMongoParams<I> implements Serializable {
     }
 
     public void checkConnectivityOptionsValid() {
-        boolean hasLink = dataLinkRef != null;
+        boolean hasDataConnection = dataConnectionRef != null;
         boolean hasClientSupplier = clientSupplier != null;
-        checkState(hasLink || hasClientSupplier, "Client supplier or data link ref should be provided");
-        checkState(hasLink != hasClientSupplier, "Only one of two should be provided: " +
-                "Client supplier or data link ref");
+        checkState(hasDataConnection || hasClientSupplier, "Client supplier or data connection ref should be provided");
+        checkState(hasDataConnection != hasClientSupplier, "Only one of two should be provided: " +
+                "Client supplier or data connection ref");
     }
 
     @Nonnull
@@ -78,19 +82,19 @@ public class ReadMongoParams<I> implements Serializable {
         return this;
     }
 
-    public DataLinkRef getDataLinkRef() {
-        return dataLinkRef;
+    public DataConnectionRef getDataConnectionRef() {
+        return dataConnectionRef;
     }
 
-    public ReadMongoParams<I> setDataLinkRef(DataLinkRef dataLinkRef) {
-        this.dataLinkRef = dataLinkRef;
+    public ReadMongoParams<I> setDataConnectionRef(DataConnectionRef dataConnectionRef) {
+        this.dataConnectionRef = dataConnectionRef;
         return this;
     }
 
     @Nonnull
-    public ReadMongoParams<I> setDataLinkRef(@Nullable String dataLinkName) {
-        if (dataLinkName != null) {
-            setDataLinkRef(dataLinkRef(dataLinkName));
+    public ReadMongoParams<I> setDataConnectionRef(@Nullable String dataConnectionName) {
+        if (dataConnectionName != null) {
+            setDataConnectionRef(dataConnectionRef(dataConnectionName));
         }
         return this;
     }
@@ -179,5 +183,21 @@ public class ReadMongoParams<I> implements Serializable {
     public ReadMongoParams<I> setThrowOnNonExisting(boolean throwOnNonExisting) {
         this.throwOnNonExisting = throwOnNonExisting;
         return this;
+    }
+
+    public ReadMongoParams<I> setNonDistributed(boolean nonDistributed) {
+        this.nonDistributed = nonDistributed;
+        return this;
+    }
+
+    public boolean isNonDistributed() {
+        return nonDistributed;
+    }
+
+    public ConnectorPermission buildPermissions() {
+        return mongo(dataConnectionRef == null ? null : dataConnectionRef.getName(),
+                getDatabaseName(),
+                getCollectionName(),
+                ActionConstants.ACTION_READ);
     }
 }

@@ -17,7 +17,7 @@
 package com.hazelcast.jet.mongodb;
 
 import com.hazelcast.config.Config;
-import com.hazelcast.config.DataLinkConfig;
+import com.hazelcast.config.DataConnectionConfig;
 import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
@@ -53,7 +53,10 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 
 public abstract class AbstractMongoTest extends SimpleTestInClusterSupport {
-    static final String TEST_MONGO_VERSION = System.getProperty("test.mongo.version", "6.0.3");
+    /**
+     * Version of MongoDB Container that will be used in the tests.
+     */
+    public static final String TEST_MONGO_VERSION = System.getProperty("test.mongo.version", "6.0.3");
 
     static MongoClient mongo;
     static BsonTimestamp startAtOperationTime;
@@ -82,8 +85,8 @@ public abstract class AbstractMongoTest extends SimpleTestInClusterSupport {
 
         Config config = new Config();
         config.addMapConfig(new MapConfig("*").setEventJournalConfig(new EventJournalConfig().setEnabled(true)));
-        config.addDataLinkConfig(new DataLinkConfig("mongoDB")
-                .setType("MongoDB")
+        config.addDataConnectionConfig(new DataConnectionConfig("mongoDB")
+                .setType("Mongo")
                 .setName("mongoDB")
                 .setShared(true)
                 .setProperty("connectionString", mongoContainer.getConnectionString())
@@ -99,19 +102,21 @@ public abstract class AbstractMongoTest extends SimpleTestInClusterSupport {
 
     @After
     public void clear() {
-        try (MongoClient mongoClient = MongoClients.create(mongoContainer.getConnectionString())) {
-            for (String databaseName : mongoClient.listDatabaseNames()) {
-                if (databaseName.startsWith("test")) {
-                    MongoDatabase database = mongoClient.getDatabase(databaseName);
-                    database.drop();
+        if (mongoContainer != null) {
+            try (MongoClient mongoClient = MongoClients.create(mongoContainer.getConnectionString())) {
+                for (String databaseName : mongoClient.listDatabaseNames()) {
+                    if (databaseName.startsWith("test")) {
+                        MongoDatabase database = mongoClient.getDatabase(databaseName);
+                        database.drop();
+                    }
                 }
+                List<String> allowedDatabasesLeft = asList("admin", "local", "config", "tech");
+                assertTrueEventually(() -> {
+                    ArrayList<String> databasesLeft = mongoClient.listDatabaseNames().into(new ArrayList<>());
+                    assertEquals(allowedDatabasesLeft.size(), databasesLeft.size());
+                    assertContainsAll(databasesLeft, allowedDatabasesLeft);
+                });
             }
-            List<String> allowedDatabasesLeft = asList("admin", "local", "config", "tech");
-            assertTrueEventually(() -> {
-                ArrayList<String> databasesLeft = mongoClient.listDatabaseNames().into(new ArrayList<>());
-                assertEquals(allowedDatabasesLeft.size(), databasesLeft.size());
-                assertContainsAll(databasesLeft, allowedDatabasesLeft);
-            });
         }
     }
 

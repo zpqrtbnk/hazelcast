@@ -162,7 +162,7 @@ public class WriteMongoP<IN, I> extends AbstractProcessor {
      * Creates a new processor that will always insert to the same database and collection.
      */
     public WriteMongoP(WriteMongoParams<I> params) {
-        this.connection = new MongoConnection(params.clientSupplier, params.dataLinkRef, client -> {
+        this.connection = new MongoConnection(params.clientSupplier, params.dataConnectionRef, client -> {
         });
         this.documentIdentityFn = params.documentIdentityFn;
         this.documentIdentityFieldName = params.documentIdentityFieldName;
@@ -235,12 +235,11 @@ public class WriteMongoP<IN, I> extends AbstractProcessor {
             MongoTransaction mongoTransaction = transactionUtility.activeTransaction();
 
             ArrayList<IN> items = drainItems(inbox);
-            @SuppressWarnings("DataFlowIssue")
             Map<MongoCollectionKey, List<I>> itemsPerCollection = items
                     .stream()
                     .map(intermediateMappingFn)
                     .map(e -> tuple2(collectionPicker.pick(e), e))
-                    .collect(groupingBy(Tuple2::f0, mapping(Tuple2::getValue, toList())));
+                    .collect(groupingBy(Tuple2::requiredF0, mapping(Tuple2::requiredF1, toList())));
 
             for (Map.Entry<MongoCollectionKey, List<I>> entry : itemsPerCollection.entrySet()) {
                 MongoCollectionKey collectionKey = entry.getKey();

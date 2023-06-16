@@ -23,7 +23,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.mongodb.MongoSourceBuilder.Batch;
 import com.hazelcast.jet.mongodb.MongoSourceBuilder.Stream;
 import com.hazelcast.jet.mongodb.impl.Mappers;
-import com.hazelcast.jet.pipeline.DataLinkRef;
+import com.hazelcast.jet.pipeline.DataConnectionRef;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.test.HazelcastParametrizedRunner;
@@ -101,14 +101,14 @@ public class MongoSourceTest extends AbstractMongoTest {
         assertEquals(COUNT_IN_BATCH, local.size());
     }
     @Test
-    public void testBatchSimpleWithDataLink() {
+    public void testBatchSimpleWithDataConnection() {
         IList<Object> list = instance().getList(testName.getMethodName());
 
         insertDocuments();
 
         Pipeline pipeline = Pipeline.create();
-        DataLinkRef link = DataLinkRef.dataLinkRef("mongoDB");
-        pipeline.readFrom(batch(link, defaultDatabase(), testName.getMethodName(), null, null))
+        DataConnectionRef dataConnectionRef = DataConnectionRef.dataConnectionRef("mongoDB");
+        pipeline.readFrom(batch(dataConnectionRef, defaultDatabase(), testName.getMethodName(), null, null))
                 .setLocalParallelism(2)
                 .writeTo(Sinks.list(list));
 
@@ -223,7 +223,7 @@ public class MongoSourceTest extends AbstractMongoTest {
 
         IList<Object> list = instance().getList(collectionName);
         String connectionString = mongoContainer.getConnectionString();
-        Stream<?> sourceBuilder = stream("customName", () -> mongoClient(connectionString))
+        Stream<?> sourceBuilder = stream(() -> mongoClient(connectionString))
                                               .database(defaultDatabase())
                                               .collection(collectionName, Document.class);
         sourceBuilder = streamFilters(sourceBuilder);

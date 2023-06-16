@@ -36,7 +36,6 @@ import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.OverridePropertyRule;
 import com.hazelcast.test.annotation.ParallelJVMTest;
 import com.hazelcast.test.annotation.SlowTest;
-import org.apache.kafka.connect.data.Values;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -74,7 +73,8 @@ public class KafkaConnectCouchbaseIntegrationTest extends JetTestSupport {
     public static final CouchbaseContainer container = new CouchbaseContainer("couchbase/server:7.1.1")
             .withBucket(new BucketDefinition(BUCKET_NAME))
             .withStartupTimeout(Duration.ofSeconds(120))
-            .withLogConsumer(new Slf4jLogConsumer(LOGGER).withPrefix("Docker"));
+            .withLogConsumer(new Slf4jLogConsumer(LOGGER).withPrefix("Docker"))
+            .withStartupAttempts(5);
 
 
     private static final int ITEM_COUNT = 1_000;
@@ -114,11 +114,10 @@ public class KafkaConnectCouchbaseIntegrationTest extends JetTestSupport {
 
         insertDocuments("items-1");
 
-
         Pipeline pipeline = Pipeline.create();
-        StreamStage<Map<String, Object>> streamStage = pipeline.readFrom(KafkaConnectSources.connect(connectorProperties))
+        StreamStage<Map<String, Object>> streamStage = pipeline.readFrom(KafkaConnectSources.connect(connectorProperties,
+                        SourceRecordUtil::convertToString))
                 .withoutTimestamps()
-                .map(record -> Values.convertToString(record.valueSchema(), record.value()))
                 .map(base64 -> Base64.getDecoder().decode(base64))
                 .map(JsonUtil::mapFrom);
 

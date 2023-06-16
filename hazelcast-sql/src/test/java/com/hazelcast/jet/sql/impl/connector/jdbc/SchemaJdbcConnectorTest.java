@@ -33,7 +33,6 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.hazelcast.jet.sql.impl.connector.jdbc.JdbcSqlConnector.OPTION_DATA_LINK_NAME;
 import static org.assertj.core.util.Lists.newArrayList;
 
 @RunWith(HazelcastParametrizedRunner.class)
@@ -71,18 +70,23 @@ public class SchemaJdbcConnectorTest extends JdbcSqlTestSupport {
                 },
                 {
                         "schema.with.dot",
+                        "table1",
+                        "\"schema.with.dot\".\"table1\"",
+                },
+                {
+                        "schema1",
                         "table.with.dot",
-                        "\"schema.with.dot\".\"table.with.dot\"",
+                        "\"schema1\".\"table.with.dot\"",
                 },
                 {
-                        "schema.with.quote\"",
-                        "table.with.quote\"",
-                        "\"schema.with.quote\"\"\".\"table.with.quote\"\"\"",
+                        "schema_with_quote\"",
+                        "table_with_quote\"",
+                        "\"schema_with_quote\"\"\".\"table_with_quote\"\"\"",
                 },
                 {
-                        "schema.with.backtick`",
-                        "table.with.backtick`",
-                        "\"schema.with.backtick`\".\"table.with.backtick`\"",
+                        "schema_with_backtick`",
+                        "table_with_backtick`",
+                        "\"schema_with_backtick`\".\"table_with_backtick`\"",
                 }
         });
     }
@@ -120,10 +124,7 @@ public class SchemaJdbcConnectorTest extends JdbcSqlTestSupport {
                         + " id INT, "
                         + " name VARCHAR "
                         + ") "
-                        + "TYPE " + JdbcSqlConnector.TYPE_NAME + ' '
-                        + "OPTIONS ( "
-                        + " '" + OPTION_DATA_LINK_NAME + "'='" + TEST_DATABASE_REF + "'"
-                        + ")"
+                        + "DATA CONNECTION " + TEST_DATABASE_REF
         );
     }
 

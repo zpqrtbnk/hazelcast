@@ -21,17 +21,17 @@ import com.hazelcast.internal.tpcengine.ReactorBuilder;
 import com.hazelcast.internal.tpcengine.iobuffer.IOBuffer;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.internal.tpcengine.TpcTestSupport.assertTrueEventually;
 import static com.hazelcast.internal.tpcengine.TpcTestSupport.assertTrueTwoSeconds;
+import static com.hazelcast.internal.tpcengine.TpcTestSupport.assumeNotIbmJDK8;
 import static com.hazelcast.internal.tpcengine.TpcTestSupport.terminate;
 import static com.hazelcast.internal.tpcengine.util.BitUtil.SIZEOF_LONG;
-import static com.hazelcast.internal.tpcengine.util.BufferUtil.upcast;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -44,6 +44,11 @@ public abstract class AsyncSocket_ReadableTest {
     private Reactor serverReactor;
 
     public abstract ReactorBuilder newReactorBuilder();
+
+    @BeforeClass
+    public static void beforeClass() throws Exception {
+        assumeNotIbmJDK8();
+    }
 
     @Before
     public void before() {
@@ -63,7 +68,7 @@ public abstract class AsyncSocket_ReadableTest {
         AsyncServerSocket serverSocket = serverReactor.newAsyncServerSocketBuilder()
                 .setAcceptConsumer(acceptRequest -> {
                     AsyncSocket asyncSocket = serverReactor.newAsyncSocketBuilder(acceptRequest)
-                            .setReadHandler(new NullReadHandler())
+                            .setReader(new DevNullAsyncSocketReader())
                             .build();
                     asyncSocket.start();
                     remoteSocketFuture.complete(asyncSocket);
@@ -73,7 +78,7 @@ public abstract class AsyncSocket_ReadableTest {
         serverSocket.start();
 
         AsyncSocket localSocket = clientReactor.newAsyncSocketBuilder()
-                .setReadHandler(new NullReadHandler())
+                .setReader(new DevNullAsyncSocketReader())
                 .build();
         localSocket.start();
         localSocket.connect(serverSocket.getLocalAddress()).join();
@@ -106,11 +111,4 @@ public abstract class AsyncSocket_ReadableTest {
         return buffer;
     }
 
-    // a read handler that tosses the received data.
-    static class NullReadHandler extends ReadHandler {
-        @Override
-        public void onRead(ByteBuffer receiveBuffer) {
-            upcast(receiveBuffer).position(receiveBuffer.limit());
-        }
-    }
 }

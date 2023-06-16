@@ -26,7 +26,7 @@
     <parent>
         <groupId>com.hazelcast</groupId>
         <artifactId>hazelcast-root</artifactId>
-        <version>5.3.0-SNAPSHOT</version>
+        <version>5.4.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -278,6 +278,7 @@
                                     !org.junit,
                                     !com.hazelcast.*,
                                     !com.fasterxml.jackson.*,
+                                    !com.zaxxer.hikari.*,
                                     !org.snakeyaml.*,
                                     !io.github.classgraph.*,
                                     !org.everit.json.*,
@@ -292,7 +293,6 @@
                                     org.apache.logging.log4j.spi;resolution:=optional,
                                     org.slf4j;resolution:=optional,
                                     org.codehaus.groovy.jsr223;resolution:=optional,
-                                    org.jruby.embed.jsr223;resolution:=optional,
                                     com.damnhandy.uri.template;resolution:=optional,
                                     org.apache.commons.validator.routines;resolution:=optional,
                                     com.google.re2j;resolution:=optional,
@@ -307,6 +307,8 @@
                                     org.hibernate.service;resolution:=optional,
                                     org.hibernate.service.spi;resolution:=optional,
                                     net.openhft.affinity;resolution:=optional,
+                                    javax.jms;resolution:=optional,
+                                    org.osgi.framework;resolution:=optional,
                                     *
                                 </Import-Package>
                                 <Bundle-Name>Hazelcast(Core)</Bundle-Name>
@@ -463,7 +465,7 @@
         <dependency>
             <groupId>com.hazelcast</groupId>
             <artifactId>hazelcast-tpc-engine</artifactId>
-            <version>5.3.0-SNAPSHOT</version>
+            <version>5.4.0-SNAPSHOT</version>
         </dependency>
 
         <dependency>
@@ -568,6 +570,15 @@
             <version>${jsr107.tck.version}</version>
             <scope>test</scope>
         </dependency>
+        <!-- Required as dependency of cache-tests -->
+        <!-- Tests like CacheExpiryTest won't work if it's not provided, -->
+        <!-- although javax.cache does not declare dependency -->
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-core</artifactId>
+            <version>2.2</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>javax.cache</groupId>
             <artifactId>cache-tests</artifactId>
@@ -635,13 +646,6 @@
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy-all</artifactId>
             <version>2.4.21</version>
-            <scope>provided</scope>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.jruby</groupId>
-            <artifactId>jruby-complete</artifactId>
-            <version>1.7.22</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
@@ -744,9 +748,33 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mysql</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mssqlserver</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mariadb</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>${postgresql.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>${mysql.connector.version}</version>
             <scope>test</scope>
         </dependency>
 

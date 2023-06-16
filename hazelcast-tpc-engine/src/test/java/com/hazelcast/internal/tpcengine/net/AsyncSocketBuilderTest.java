@@ -21,11 +21,13 @@ import com.hazelcast.internal.tpcengine.Reactor;
 import com.hazelcast.internal.tpcengine.ReactorBuilder;
 import com.hazelcast.internal.tpcengine.TpcTestSupport;
 import org.junit.After;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.hazelcast.internal.tpcengine.TpcTestSupport.assumeNotIbmJDK8;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -42,6 +44,11 @@ public abstract class AsyncSocketBuilderTest {
         Reactor reactor = builder.build();
         reactors.add(reactor);
         return reactor.start();
+    }
+
+    @BeforeClass
+    public static void beforeClass() throws Exception {
+        assumeNotIbmJDK8();
     }
 
     @After
@@ -95,25 +102,25 @@ public abstract class AsyncSocketBuilderTest {
     public void test_setReadHandler_whenReadHandlerNull() {
         Reactor reactor = newReactor();
         AsyncSocketBuilder builder = reactor.newAsyncSocketBuilder();
-        assertThrows(NullPointerException.class, () -> builder.setReadHandler(null));
+        assertThrows(NullPointerException.class, () -> builder.setReader(null));
     }
 
     @Test
     public void test_setReadHandler_whenAlreadyBuild() {
         Reactor reactor = newReactor();
         AsyncSocketBuilder builder = reactor.newAsyncSocketBuilder();
-        builder.setReadHandler(new DevNullReadHandler());
+        builder.setReader(new DevNullAsyncSocketReader());
         builder.build();
 
-        DevNullReadHandler readHandler = new DevNullReadHandler();
-        assertThrows(IllegalStateException.class, () -> builder.setReadHandler(readHandler));
+        DevNullAsyncSocketReader readHandler = new DevNullAsyncSocketReader();
+        assertThrows(IllegalStateException.class, () -> builder.setReader(readHandler));
     }
 
     @Test
     public void test_build_whenAlreadyBuild() {
         Reactor reactor = newReactor();
         AsyncSocketBuilder builder = reactor.newAsyncSocketBuilder();
-        builder.setReadHandler(new DevNullReadHandler());
+        builder.setReader(new DevNullAsyncSocketReader());
         builder.build();
 
         assertThrows(IllegalStateException.class, () -> builder.build());
