@@ -10,12 +10,12 @@ import javax.annotation.Nonnull;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-// provides the dotnet transformations
+// FIXME temp test code, will remove, should be part of DotnetJetExtension
+
 public final class DotnetTransforms {
 
     private DotnetTransforms() { }
 
-    // FIXME temp test code that will be removed, eventually
     @Nonnull
     public static <TInput, TResult> FunctionEx<StreamStage<TInput>, StreamStage<TResult>> mapAsync0(@Nonnull DotnetServiceConfig config) {
 

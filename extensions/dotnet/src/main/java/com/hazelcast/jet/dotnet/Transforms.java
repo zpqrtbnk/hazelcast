@@ -3,13 +3,17 @@ package com.hazelcast.jet.dotnet;
 import com.hazelcast.internal.journal.DeserializingEntry;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.impl.HeapData;
+import com.hazelcast.oop.DeserializingEntryExtensions;
+import com.hazelcast.oop.channel.IJetPipe;
+import com.hazelcast.oop.JetMessage;
 import com.hazelcast.logging.Logger;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 
-// provides actual transformations
+// FIXME temp test code, will remove
+
 public final class Transforms {
 
     public static CompletableFuture<String> toStringJava(int input, DotnetServiceContext context) {

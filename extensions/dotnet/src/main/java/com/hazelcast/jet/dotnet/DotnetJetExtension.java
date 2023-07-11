@@ -3,12 +3,13 @@ package com.hazelcast.jet.dotnet;
 import com.hazelcast.internal.journal.DeserializingEntry;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.yaml.YamlMapping;
+import com.hazelcast.oop.DeserializingEntryExtensions;
 import com.hazelcast.jet.pipeline.StreamSourceStage;
 import com.hazelcast.jet.pipeline.StreamStage;
-import com.hazelcast.jet.ext.yaml.JobBuilderExtension;
-import com.hazelcast.jet.ext.yaml.JobBuilder;
-import com.hazelcast.jet.ext.yaml.JobBuilderException;
-import com.hazelcast.jet.ext.yaml.YamlUtils;
+import com.hazelcast.jet.yaml.JobBuilderExtension;
+import com.hazelcast.jet.yaml.JobBuilder;
+import com.hazelcast.jet.yaml.JobBuilderException;
+import com.hazelcast.jet.yaml.YamlUtils;
 import com.hazelcast.logging.ILogger;
 
 public class DotnetJetExtension implements JobBuilderExtension {
@@ -19,6 +20,14 @@ public class DotnetJetExtension implements JobBuilderExtension {
         jobBuilder.registerTransform("dotnet", DotnetJetExtension::transformDotnet);
     }
 
+    // - transform: dotnet
+    //   dotnet-dir:
+    //   dotnet-exe: name of the executable (without .exe, we'll figure it out)
+    //   dotnet-method: name of the service method
+    //   preserve-order: true|false
+    //   parallelism:
+    //     processors: number of processors (jet local parallelism)
+    //     operations: number of operations (dotnet service concurrent ops)
     private static Object transformDotnet(Object stageContext, String name, YamlMapping properties, ILogger logger) throws JobBuilderException {
 
         DotnetServiceConfig config = new DotnetServiceConfig()

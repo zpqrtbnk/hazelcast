@@ -8,6 +8,7 @@ import com.hazelcast.internal.util.OsHelper;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.core.JobStatus;
+import com.hazelcast.oop.DeserializingEntryExtensions;
 import com.hazelcast.jet.impl.util.IOUtil;
 import com.hazelcast.jet.pipeline.*;
 import com.hazelcast.jet.pipeline.test.AssertionSinks;

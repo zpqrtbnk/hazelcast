@@ -1,14 +1,7 @@
 package com.hazelcast.jet.dotnet;
 
-import com.hazelcast.internal.yaml.YamlLoader;
-import com.hazelcast.internal.yaml.YamlNode;
-import com.hazelcast.jet.impl.deployment.IMapInputStream;
-import com.hazelcast.jet.impl.util.ExceptionUtil;
-import com.hazelcast.jet.pipeline.*;
-import com.hazelcast.jet.ext.yaml.JobBuilder;
 import org.junit.Test;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -16,10 +9,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-
-import static com.hazelcast.jet.Util.idToString;
-import static com.hazelcast.jet.impl.JobRepository.fileKeyName;
-import static com.hazelcast.jet.impl.util.IOUtil.unzip;
 
 public class JobSubmitTests {
 

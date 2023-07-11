@@ -1,6 +1,10 @@
 package com.hazelcast.jet.dotnet;
 
 import com.hazelcast.internal.util.OsHelper;
+import com.hazelcast.oop.channel.IJetPipe;
+import com.hazelcast.oop.JetMessage;
+import com.hazelcast.oop.SharedMemoryPipe;
+import com.hazelcast.oop.service.ServiceProcess;
 import com.hazelcast.logging.ILogger;
 
 import java.io.File;
@@ -14,9 +18,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import static java.lang.Thread.currentThread;
-import static java.util.concurrent.TimeUnit.SECONDS;
-
 // represents the dotnet hub
 public final class DotnetHub {
 
@@ -24,16 +25,13 @@ public final class DotnetHub {
 
     private final static int DATA_CAPACITY = 1024; // bytes
     private final static int SPIN_DELAY = 4; // milliseconds
-    private final static int PROCESS_DEATH_TIMEOUT = 2; // seconds
 
     private final DotnetServiceContext serviceContext;
     private final DotnetServiceConfig config;
     private final Queue<IJetPipe> pipes;
 
     private final ILogger logger;
-    private Process dotnetProcess;
-    private String dotnetProcessId;
-    private Thread stdoutLoggingThread;
+    private ServiceProcess dotnetProcess;
 
     // initializes a new dotnet hub
     public DotnetHub(DotnetServiceContext serviceContext) throws IOException {
@@ -75,7 +73,7 @@ public final class DotnetHub {
             throw new IOException("Invalid runtime directory " + runtimeDir);
         }
 
-        String platform = SystemExtensions.getPlatform();
+        String platform = ServiceProcess.getPlatform();
 //        String platformDir = runtimeDir + File.separator + platform;
 //        File platformFile = new File(platformDir);
 //        if (!platformFile.exists() || !platformFile.isDirectory()) {
@@ -104,25 +102,21 @@ public final class DotnetHub {
         }
 
         int pipesCount = config.getLocalParallelism() * config.getMaxConcurrentOps();
-        ProcessBuilder builder = new ProcessBuilder(dotnetExe, pipeName, Integer.toString(pipesCount));
 
-        dotnetProcess = builder
-                .directory(runtimeDir)
-                .redirectErrorStream(true)
+        dotnetProcess = new ServiceProcess("dotnet-jet", runtimeDir, serviceContext.getLoggingService())
+                .command(dotnetExe, pipeName, Integer.toString(pipesCount))
                 .start();
 
-        dotnetProcessId = SystemExtensions.processPid(dotnetProcess);
-        stdoutLoggingThread = SystemExtensions.logStdOut(dotnetProcess, logger);
-        logger.fine("DotnetHub [" + dotnetProcessId + "] started, running for " + instanceName + " over " + pipeName);
+        logger.fine("DotnetHub [" + dotnetProcess.pid() + "] started, running for " + instanceName + " over " + pipeName);
     }
 
     // stops the dotnet process
     private void stopProcess() {
 
-        logger.fine("DotnetHub `[" + dotnetProcessId + "]` stopping");
+        logger.fine("DotnetHub `[" + dotnetProcess.pid() + "]` stopping");
 
         if (!dotnetProcess.isAlive()) {
-            logger.fine("DotnetHub `[" + dotnetProcessId + "]` already stopped");
+            logger.fine("DotnetHub `[" + dotnetProcess.pid() + "]` already stopped");
             return;
         }
 
@@ -131,57 +125,17 @@ public final class DotnetHub {
             IJetPipe pipe = pipes.poll();
             if (pipe != null) {
                 pipe.write(JetMessage.KissOfDeath);
-                logger.fine("DotnetHub [" + dotnetProcessId + "] sent kiss-of-death to dotnet process");
+                logger.fine("DotnetHub [" + dotnetProcess.pid() + "] sent kiss-of-death to dotnet process");
             }
             else {
-                logger.fine("DotnetHub [" + dotnetProcessId + "] could not send kiss-of-death to dotnet process");
-            }
-        }
-        catch (Exception e) {
-            logger.fine("DotnetHub [" + dotnetProcessId + "] failed to send kiss-of-death to dotnet process", e);
-        }
-
-        // keep track of thread interruptions that we are going to catch
-        boolean interrupted = false;
-        boolean destroyed = false;
-
-        // give the process some time to stop, then kill it for real
-        while (true) {
-            try {
-                if (dotnetProcess.waitFor(PROCESS_DEATH_TIMEOUT, SECONDS)) {
-                    break;
+                logger.fine("DotnetHub [" + dotnetProcess.pid() + "] could not send kiss-of-death to dotnet process");
                 }
-            } catch (InterruptedException e) {
-                logger.fine("DotnetHub [" + dotnetProcessId + "] ignoring interruption signal in order to prevent process leak");
-                interrupted = true;
             }
-            logger.fine("DotnetHub [" + dotnetProcessId + "] still running after " + PROCESS_DEATH_TIMEOUT + "s, kill");
-            if (destroyed) {
-                dotnetProcess.destroyForcibly(); // SIGKILL
-            }
-            else {
-                dotnetProcess.destroy(); // SIGTERM
-                destroyed = true;
-            }
+        catch (Exception e) {
+            logger.fine("DotnetHub [" + dotnetProcess.pid() + "] failed to send kiss-of-death to dotnet process", e);
         }
 
-        // join the logging thread
-        while (true) {
-            try {
-                stdoutLoggingThread.join();
-                break;
-            } catch (InterruptedException e) {
-                logger.fine("DotnetHub [" + dotnetProcessId + "] ignoring interruption signal in order to prevent " + stdoutLoggingThread.getName() + " thread leak");
-                interrupted = true;
-            } catch (Exception e) {
-                logger.warning("DotnetHub [" + dotnetProcessId + "] " + stdoutLoggingThread.getName() + " thread has completed with an exception", e);
-            }
-        }
-
-        // if we have caught an interrupt, interrupt
-        if (interrupted) {
-            currentThread().interrupt();
-        }
+        dotnetProcess.stop();
     }
 
     // destroys the dotnet hub
@@ -189,11 +143,7 @@ public final class DotnetHub {
 
         stopProcess();
 
-        IJetPipe pipe;
-        while ((pipe = pipes.poll()) != null) {
-
-            pipe.destroy();
-        }
+        for (IJetPipe pipe; (pipe = pipes.poll()) != null; ) pipe.destroy();
     }
 
     // open the pipes
@@ -205,7 +155,7 @@ public final class DotnetHub {
         for (int i = 0; i < pipesCount; i++)
             pipes.add(new SharedMemoryPipe(false, null, pipeName + "-" + i, DATA_CAPACITY, SPIN_DELAY));
 
-        logger.fine("DotnetHub [" + dotnetProcessId + "] opened " + pipes.size() + " pipes");
+        logger.fine("DotnetHub [" + dotnetProcess.pid() + "] opened " + pipes.size() + " pipes");
     }
 
     // get a pipe from the hub

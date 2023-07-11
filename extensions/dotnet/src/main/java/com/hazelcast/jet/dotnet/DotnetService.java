@@ -3,6 +3,9 @@ package com.hazelcast.jet.dotnet;
 import com.hazelcast.internal.journal.DeserializingEntry;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.impl.HeapData;
+import com.hazelcast.oop.DeserializingEntryExtensions;
+import com.hazelcast.oop.channel.IJetPipe;
+import com.hazelcast.oop.JetMessage;
 
 import java.io.IOException;
 import java.util.Map;

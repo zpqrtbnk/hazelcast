@@ -2,10 +2,11 @@ package com.hazelcast.jet.dotnet;
 
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.oop.service.ServiceProcess;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.LoggingService;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.UUID;
 
@@ -26,7 +27,7 @@ public final class DotnetServiceContext {
 
         // recreate the dotnet directory (only for the current platform)
         // this code runs on each member where the job is running
-        String platform = SystemExtensions.getPlatform();
+        String platform = ServiceProcess.getPlatform();
 
         // writes
         // RESOURCES:
@@ -71,6 +72,12 @@ public final class DotnetServiceContext {
     public ILogger getLogger(String name) {
 
         return processorContext.hazelcastInstance().getLoggingService().getLogger(name);
+    }
+
+    // gets the logger service
+    public LoggingService getLoggingService() {
+
+        return processorContext.hazelcastInstance().getLoggingService();
     }
 
     // gets the runtime directory

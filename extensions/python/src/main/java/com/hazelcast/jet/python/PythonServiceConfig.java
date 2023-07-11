@@ -17,7 +17,7 @@ package com.hazelcast.jet.python;
 
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.internal.util.Preconditions;
-import com.hazelcast.jet.ext.JetServiceConfigurationException;
+import com.hazelcast.oop.JetServiceConfigurationException;
 import com.hazelcast.jet.pipeline.GeneralStage;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;

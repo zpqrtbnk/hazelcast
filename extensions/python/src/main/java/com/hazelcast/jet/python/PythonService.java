@@ -65,7 +65,7 @@ final class PythonService {
 
     PythonService(PythonServiceContext serviceContext) {
         logger = serviceContext.logger();
-        server = new JetToPythonServer(serviceContext.runtimeBaseDir(), logger);
+        server = new JetToPythonServer(serviceContext.runtimeBaseDir(), logger, serviceContext);
         try {
             int serverPort = server.start();
             chan = serviceContext.channelFn().apply("127.0.0.1", serverPort)
