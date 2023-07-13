@@ -30,12 +30,13 @@ import java.util.ServiceLoader;
 // builds jobs
 public final class JobBuilder {
 
-    private static final Map<String, JobBuilderFunction4<Pipeline, String, YamlMapping, ILogger, Object>> sources = new HashMap<>();
-    private static final Map<String, JobBuilderConsumer4<Object, String, YamlMapping, ILogger>> sinks = new HashMap<>();
-    private static final Map<String, JobBuilderFunction4<Object, String, YamlMapping, ILogger, Object>> transforms = new HashMap<>();
+    private static final Map<String, Function4<Pipeline, String, YamlMapping, ILogger, Object>> sources = new HashMap<>();
+    private static final Map<String, Consumer4<Object, String, YamlMapping, ILogger>> sinks = new HashMap<>();
+    private static final Map<String, Function4<Object, String, YamlMapping, ILogger, Object>> transforms = new HashMap<>();
 
     private final Object mutex = new Object();
     private final ILogger logger;
+    private boolean initialized;
     private Pipeline pipeline;
     private JobConfig jobConfig;
     private Map<String, Object> stages = new HashMap<>();
@@ -45,39 +46,45 @@ public final class JobBuilder {
     public JobBuilder(ILogger logger) {
 
         this.logger = logger;
-        logger.fine("init");
 
         synchronized (mutex) {
 
-            if (sources.isEmpty()) {
+            if (!initialized) {
 
-                // service loader ignores these
-                new YamlSources().register(this);
-                new YamlSinks().register(this);
-                new YamlTransforms().register(this);
+                addSteps(new BuiltinStepProvider());
 
-                ServiceLoader<JobBuilderExtension> extensions = ServiceLoader.load(JobBuilderExtension.class);
-                for (JobBuilderExtension extension : extensions) {
-                    logger.fine("register extension: " + extension);
-                    extension.register(this);
+                ServiceLoader<StepProvider> providers = ServiceLoader.load(StepProvider.class);
+                for (StepProvider provider : providers) {
+                    addSteps(provider);
                 }
+
+                initialized = true;
             }
         }
     }
 
-    public void registerTransform(String name, JobBuilderFunction4<Object, String, YamlMapping, ILogger, Object> f) {
+    private void addSteps(StepProvider provider)
+    {
+        SourceStep[] sourceSteps = provider.getSources();
+        if (sourceSteps != null) {
+            for (SourceStep step : sourceSteps) {
+                sources.put(step.getName(), step.getFunction());
+            }
+        }
 
-        transforms.put(name, f);
-    }
+        TransformStep[] transformSteps = provider.getTransforms();
+        if (transformSteps != null) {
+            for (TransformStep step : transformSteps) {
+                transforms.put(step.getName(), step.getFunction());
+            }
+        }
 
-    public void registerSource(String name, JobBuilderFunction4<Pipeline, String, YamlMapping, ILogger, Object> f) {
-
-        sources.put(name, f);
-    }
-
-    public void registerSink(String name, JobBuilderConsumer4<Object, String, YamlMapping, ILogger> f) {
-
-        sinks.put(name, f);
+        SinkStep[] sinkSteps = provider.getSinks();
+        if (sinkSteps != null) {
+            for (SinkStep step : sinkSteps) {
+                sinks.put(step.getName(), step.getFunction());
+            }
+        }
     }
 
     // gets the job pipeline
@@ -224,7 +231,7 @@ public final class JobBuilder {
         if (pipelineContext == null || stageContext != null) {
             throw new JobBuilderException("panic: invalid context");
         }
-        JobBuilderFunction4<Pipeline, String, YamlMapping, ILogger, Object> f = sources.get(name);
+        Function4<Pipeline, String, YamlMapping, ILogger, Object> f = sources.get(name);
         if (f == null) {
             throw new JobBuilderException("panic: unknown source '" + name + "'");
         }
@@ -237,7 +244,7 @@ public final class JobBuilder {
         if (pipelineContext != null || stageContext == null) {
             throw new JobBuilderException("panic: invalid context");
         }
-        JobBuilderConsumer4<Object, String, YamlMapping, ILogger> f = sinks.get(name);
+        Consumer4<Object, String, YamlMapping, ILogger> f = sinks.get(name);
         if (f == null) {
             throw new JobBuilderException("panic: unknown sink '" + name + "'");
         }
@@ -250,7 +257,7 @@ public final class JobBuilder {
         if (pipelineContext != null || stageContext == null) {
             throw new JobBuilderException("panic: invalid context");
         }
-        JobBuilderFunction4<Object, String, YamlMapping, ILogger, Object> f = transforms.get(name);
+        Function4<Object, String, YamlMapping, ILogger, Object> f = transforms.get(name);
         if (f == null) {
             throw new JobBuilderException("panic: unknown transform '" + name + "'");
         }

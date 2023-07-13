@@ -49,7 +49,6 @@
         <module>mapstore</module>
         <module>mongodb</module>
         <module>s3</module>
-        <module>ext</module>
         <module>dotnet</module>
     </modules>
 

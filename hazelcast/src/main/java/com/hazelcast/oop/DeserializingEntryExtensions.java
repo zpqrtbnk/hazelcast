@@ -19,6 +19,7 @@ package com.hazelcast.oop;
 import com.hazelcast.internal.journal.DeserializingEntry;
 import com.hazelcast.internal.serialization.Data;
 
+import javax.annotation.Nonnull;
 import java.lang.reflect.Field;
 
 // provides utilities for dealing with DeserializingEntry instances
@@ -52,6 +53,25 @@ public final class DeserializingEntryExtensions {
         }
 
         initialized = true;
+    }
+
+    @Nonnull
+    public static <TK, TV> Data[] getData(DeserializingEntry<TK, TV> entry) {
+
+        // is private
+        //return entry.dataKey;
+        //return entry.dataValue;
+
+        initialize();
+        try {
+            return new Data[] {
+                (Data) dataKey.get(entry),
+                (Data) dataValue.get(entry)
+            };
+        }
+        catch (Exception e) {
+            return null; // meh
+        }
     }
 
     // gets the key as Data
@@ -89,6 +109,27 @@ public final class DeserializingEntryExtensions {
     public static <TK, TV> DeserializingEntry<TK, TV> createNew(DeserializingEntry<?,?> entry, Data dataKey, Data dataValue) {
 
         DeserializingEntry<TK, TV> result = new DeserializingEntry<TK, TV>(dataKey, dataValue);
+
+        // is private
+        //result.serializationService = entry.serializationService;
+
+        initialize();
+        try {
+            serializationService.set(result, serializationService.get(entry));
+        }
+        catch (Exception e) {
+            // meh
+        }
+
+        return result;
+    }
+
+    // creates a new DeserializingEntry instance
+    // by copying the SerializationService from another entry
+    @Nonnull
+    public static <TK, TV> DeserializingEntry<TK, TV> createNew(DeserializingEntry<?,?> entry, Data[] data) {
+
+        DeserializingEntry<TK, TV> result = new DeserializingEntry<TK, TV>(data[0], data[1]);
 
         // is private
         //result.serializationService = entry.serializationService;

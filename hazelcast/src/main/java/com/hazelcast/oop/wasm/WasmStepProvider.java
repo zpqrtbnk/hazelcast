@@ -2,19 +2,26 @@ package com.hazelcast.oop.wasm;
 
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.yaml.YamlMapping;
-import com.hazelcast.jet.yaml.JobBuilder;
-import com.hazelcast.jet.yaml.JobBuilderException;
-import com.hazelcast.jet.yaml.JobBuilderExtension;
+import com.hazelcast.jet.yaml.*;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.logging.ILogger;
 
-public class WasmJetExtension implements JobBuilderExtension {
+public class WasmStepProvider implements StepProvider {
 
     @Override
-    public void register(JobBuilder jobBuilder) {
+    public SourceStep[] getSources() {
+        return null;
+    }
 
-        // TODO: enable if it ever works
-        //jobBuilder.registerTransform("wasm", WasmJetExtension::transformWasm);
+    @Override
+    public TransformStep[] getTransforms() {
+        //("wasm", transformWasm);
+        return null;
+    }
+
+    @Override
+    public SinkStep[] getSinks() {
+        return new SinkStep[0];
     }
 
     private static Object transformWasm(Object stageContext, String name, YamlMapping properties, ILogger logger) throws JobBuilderException {

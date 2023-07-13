@@ -41,12 +41,8 @@ import java.util.concurrent.CountDownLatch;
 import static java.lang.Thread.currentThread;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
-/**
- * The service object used by the "map using Python" pipeline stage. As a
- * user you don't have to deal with this class directly. It is used when
- * you write {@link PythonTransforms#mapUsingPython
- * stage.apply(PythonService.mapUsingPython(pyConfig))}
- */
+// provides the dotnet service
+// i.e. is a proxy to the out-of-process dotnet runtime
 final class PythonService {
 
     private static final int CREATE_CONTEXT_RETRY_COUNT = 2;

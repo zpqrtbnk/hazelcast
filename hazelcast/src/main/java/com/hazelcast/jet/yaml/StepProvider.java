@@ -16,11 +16,15 @@
 
 package com.hazelcast.jet.yaml;
 
-// a consumer accepting two parameters, that can throw a JobBuilderException
-@FunctionalInterface
-public interface JobBuilderConsumer2<T, U> {
+// provides steps for the JobBuilder
+public interface StepProvider {
 
-    // accepts parameters
-    void accept(T t, U u) throws JobBuilderException;
+    // gets the source steps, or null if none are provided
+    SourceStep[] getSources();
+
+    // gets the transform steps, or null if none are provided
+    TransformStep[] getTransforms();
+
+    // gets the sink steps, or null if none are provided
+    SinkStep[] getSinks();
 }
-

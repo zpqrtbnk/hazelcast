@@ -1,16 +1,26 @@
 package com.hazelcast.jet.debug;
 
 import com.hazelcast.internal.yaml.YamlMapping;
-import com.hazelcast.jet.yaml.JobBuilder;
-import com.hazelcast.jet.yaml.JobBuilderException;
-import com.hazelcast.jet.yaml.JobBuilderExtension;
+import com.hazelcast.jet.yaml.*;
 import com.hazelcast.logging.ILogger;
 
-public class JetDebugExtension implements JobBuilderExtension {
+public class DebugStepProvider implements StepProvider {
 
     @Override
-    public void register(JobBuilder jobBuilder) {
-        jobBuilder.registerTransform("debug", JetDebugExtension::debug);
+    public SourceStep[] getSources() {
+        return null;
+    }
+
+    @Override
+    public TransformStep[] getTransforms() {
+        return new TransformStep[] {
+            new TransformStep("debug", DebugStepProvider::debug)
+        };
+    }
+
+    @Override
+    public SinkStep[] getSinks() {
+        return null;
     }
 
     private static Object debug(Object stageContext, String name, YamlMapping properties, ILogger logger) throws JobBuilderException {

@@ -18,7 +18,7 @@ package com.hazelcast.jet.yaml;
 
 // a function accepting two parameters, that can throw a JobBuilderException
 @FunctionalInterface
-public interface JobBuilderFunction2<T, U, R> {
+public interface Function2<T, U, R> {
 
     // applies the function to the parameters and returns the result
     R apply(T t, U u) throws JobBuilderException;

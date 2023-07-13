@@ -16,10 +16,11 @@
 
 package com.hazelcast.jet.yaml;
 
-// a consumer accepting four parameters, that can throw a JobBuilderException
+// a consumer accepting two parameters, that can throw a JobBuilderException
 @FunctionalInterface
-public interface JobBuilderConsumer4<T, U, V, W> {
+public interface Consumer2<T, U> {
 
     // accepts parameters
-    void accept(T t, U u, V v, W w) throws JobBuilderException;
+    void accept(T t, U u) throws JobBuilderException;
 }
+

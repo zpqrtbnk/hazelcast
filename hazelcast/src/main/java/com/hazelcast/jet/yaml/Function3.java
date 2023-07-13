@@ -16,9 +16,11 @@
 
 package com.hazelcast.jet.yaml;
 
-// define an extension that will register methods with the JobBuilder
-public interface JobBuilderExtension {
+// a function accepting three parameters, that can throw a JobBuilderException
+@FunctionalInterface
+public interface Function3<T, U, V, R> {
 
-    // registers methods with the JobBuilder
-    void register(JobBuilder jobBuilder);
+    // applies the function to the parameters and returns the result
+    R apply(T t, U u, V v) throws JobBuilderException;
 }
+

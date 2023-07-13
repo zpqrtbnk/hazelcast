@@ -139,6 +139,7 @@ public class DotnetJetTest extends SimpleTestInClusterSupport {
         p
                 .readFrom(TestSources.items(items)).addTimestamps(x -> 0, 0)
 
+                // uncomment!!
                 .apply(DotnetTransforms.<Integer, String>mapAsync0(config))
                 .setLocalParallelism(config.getLocalParallelism()) // number of processors per member
 

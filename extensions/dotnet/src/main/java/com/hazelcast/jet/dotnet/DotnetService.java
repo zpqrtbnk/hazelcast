@@ -13,6 +13,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 // provides the dotnet service
+// i.e. is a proxy to the out-of-process dotnet runtime
 public final class DotnetService {
 
     private final DotnetServiceContext serviceContext;
@@ -31,9 +32,11 @@ public final class DotnetService {
         transformName = serviceContext.getConfig().getTransformName();
     }
 
-    // FIXME temp test code that will be removed, eventually
+    // NOTE: this is test code that could be used to benchmark different methods
+    // the 'Transforms' class it uses has move to the test project for now
     <TInput, TResult> CompletableFuture<TResult> mapAsync0(TInput input) {
 
+        /*
         DotnetServiceConfig config = serviceContext.getConfig();
         String methodName = config.getTransformName();
 
@@ -47,6 +50,8 @@ public final class DotnetService {
             return Transforms.doThingDotnet(input, serviceContext, dotnetHub);
 
         throw new UnsupportedOperationException("DotnetService does not support method '" + methodName + "'");
+         */
+        throw new UnsupportedOperationException("meh");
     }
 
     // maps an entry using dotnet
