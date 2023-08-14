@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.hazelcast.jet.usercoderuntimeservice.impl";
+option java_outer_classname = "JetToRuntimeControllerService";
+
+package jet_to_runtimeController;
+
+service JetToRuntimeController{
+  rpc create(RuntimeRequest) returns (RuntimeResponse){};
+  rpc destroy(RuntimeDestroyRequest) returns (Empty){};
+}
+
+message RuntimeRequest{
+  string name=1;
+  optional string imageName=2;
+  optional int32 listeningPort=3;
+}
+
+message RuntimeResponse{
+  string uuid=1;
+  string address=2;
+  int32 port=3;
+}
+
+message RuntimeDestroyRequest{
+  string uuid=1;
+}
+
+message Empty{}
