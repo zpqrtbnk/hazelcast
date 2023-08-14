@@ -55,6 +55,7 @@ public final class JobBuilder {
 
                 ServiceLoader<StepProvider> providers = ServiceLoader.load(StepProvider.class);
                 for (StepProvider provider : providers) {
+                    logger.fine("Registering steps from provider: " + provider);
                     addSteps(provider);
                 }
 

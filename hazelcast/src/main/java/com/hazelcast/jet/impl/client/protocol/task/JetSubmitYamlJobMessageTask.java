@@ -21,6 +21,7 @@ import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.client.impl.protocol.codec.JetSubmitYamlJobCodec;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.operation.SubmitJobOperation;
 import com.hazelcast.jet.yaml.JobBuilder;
 import com.hazelcast.jet.yaml.JobBuilderException;
@@ -34,14 +35,12 @@ import java.util.concurrent.CompletableFuture;
 
 public class JetSubmitYamlJobMessageTask extends AbstractJetMessageTask<JetSubmitYamlJobCodec.RequestParameters, Void> {
 
-    private UUID lightJobCoordinator;
-
     public JetSubmitYamlJobMessageTask(ClientMessage clientMessage, Node node, Connection connection) {
         super(clientMessage, node, connection, JetSubmitYamlJobCodec::decodeRequest, o -> JetSubmitYamlJobCodec.encodeResponse());
     }
 
     @Override
-    protected UUID getLightJobCoordinator() { return lightJobCoordinator; }
+    protected UUID getLightJobCoordinator() { return parameters.lightJobCoordinator; }
 
     // from AbstractInvocationMessageTask
     @Override
@@ -75,16 +74,21 @@ public class JetSubmitYamlJobMessageTask extends AbstractJetMessageTask<JetSubmi
         JobBuilder jobBuilder = new JobBuilder(logger);
         jobBuilder.parse(parameters.jobYaml);
 
-        // TODO understand this
-        lightJobCoordinator = null;
-        boolean isLightJob = false;
+        boolean isLightJob = parameters.lightJobCoordinator != null;
 
-        Data jobDefinition = toData(jobBuilder.getPipeline());
-        Data jobConfig = toData(jobBuilder.getConfig());
+        JobConfig deserializedJobConfig = jobBuilder.getConfig();
+        Data serializedJobConfig = null; // no point serializing
+
+        Object deserializedJobDefinition = jobBuilder.getPipeline();
+        Data serializedJobDefinition = null; // the jobDefinition for non-light job *must* be serialized
+        if (!isLightJob) {
+            serializedJobDefinition = nodeEngine.toData(deserializedJobDefinition);
+            deserializedJobDefinition = null;
+        }
 
         return new SubmitJobOperation(parameters.jobId,
-                null, null,
-                jobDefinition, jobConfig,
+                deserializedJobDefinition, deserializedJobConfig,
+                serializedJobDefinition, serializedJobConfig,
                 isLightJob,
                 endpoint.getSubject());
     }

@@ -399,13 +399,13 @@
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-dotnet</artifactId>
+            <artifactId>hazelcast-jet-usercode</artifactId>
             <version>${project.version}</version>
             <classifier>${fat.dependency.classifier}</classifier>
         </dependency>
         <dependency>
-            <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-ext</artifactId>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast-usercode</artifactId>
             <version>${project.version}</version>
             <classifier>${fat.dependency.classifier}</classifier>
         </dependency>

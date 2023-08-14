@@ -49,7 +49,7 @@
         <module>mapstore</module>
         <module>mongodb</module>
         <module>s3</module>
-        <module>dotnet</module>
+        <module>usercode</module>
     </modules>
 
     <profiles>
@@ -64,6 +64,7 @@
                 <module>grpc</module>
                 <module>protobuf</module>
                 <module>python</module>
+                <module>usercode</module>
             </modules>
         </profile>
     </profiles>

@@ -5,6 +5,8 @@ import com.hazelcast.client.impl.protocol.codec.builtin.StringCodec;
 import com.hazelcast.internal.yaml.YamlLoader;
 import com.hazelcast.internal.yaml.YamlNode;
 
+import javax.annotation.Nullable;
+
 import static com.hazelcast.client.impl.protocol.ClientMessage.*;
 import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.*;
 
@@ -26,11 +28,13 @@ public final class JetSubmitYamlJobCodec {
         public boolean dryRun;
         public YamlNode jobYaml;
 
+        public @Nullable java.util.UUID lightJobCoordinator;
+
         /*
          * True if the lightJobCoordinator is received from the client, false otherwise.
          * If this is false, lightJobCoordinator has the default value for its type.
          */
-        //public boolean isLightJobCoordinatorExists;
+        public boolean isLightJobCoordinatorExists;
     }
 
     public static ClientMessage encodeRequest(long jobId, boolean dryRun, String jobYaml) {
