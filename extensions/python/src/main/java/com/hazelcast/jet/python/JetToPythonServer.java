@@ -15,7 +15,6 @@
  */
 package com.hazelcast.jet.python;
 
-import com.hazelcast.oop.service.ServiceProcess;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;

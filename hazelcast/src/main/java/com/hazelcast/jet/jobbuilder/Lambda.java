@@ -1,4 +1,4 @@
-package com.hazelcast.jet.yaml;
+package com.hazelcast.jet.jobbuilder;
 
 public interface Lambda<T, R> {
 

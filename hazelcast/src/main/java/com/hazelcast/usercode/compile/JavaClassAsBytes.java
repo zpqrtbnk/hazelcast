@@ -1,4 +1,4 @@
-package com.hazelcast.oop.compile;
+package com.hazelcast.usercode.compile;
 
 import javax.tools.SimpleJavaFileObject;
 import java.io.ByteArrayOutputStream;

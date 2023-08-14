@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.yaml;
+package com.hazelcast.jet.jobbuilder;
 
 import com.hazelcast.internal.yaml.*;
 import com.hazelcast.jet.config.JobConfig;

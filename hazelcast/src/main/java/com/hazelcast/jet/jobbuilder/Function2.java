@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.yaml;
+package com.hazelcast.jet.jobbuilder;
 
-// a function accepting four parameters, that can throw a JobBuilderException
+// a function accepting two parameters, that can throw a JobBuilderException
 @FunctionalInterface
-public interface Function4<T, U, V, W, R> {
+public interface Function2<T, U, R> {
 
-    // applies the function to the parameters, and returns the result
-    R apply(T t, U u, V v, W w) throws JobBuilderException;
+    // applies the function to the parameters and returns the result
+    R apply(T t, U u) throws JobBuilderException;
 }
+

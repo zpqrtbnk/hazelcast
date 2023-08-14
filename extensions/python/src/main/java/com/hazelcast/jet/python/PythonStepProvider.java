@@ -1,7 +1,7 @@
 package com.hazelcast.jet.python;
 
 import com.hazelcast.internal.yaml.YamlMapping;
-import com.hazelcast.jet.yaml.*;
+import com.hazelcast.jet.jobbuilder.*;
 import com.hazelcast.logging.ILogger;
 
 public class PythonStepProvider implements StepProvider {

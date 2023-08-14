@@ -11,10 +11,9 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.StreamStage;
-import com.hazelcast.jet.yaml.*;
+import com.hazelcast.jet.jobbuilder.*;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
-import com.hazelcast.oop.DeserializingEntryExtensions;
 import com.hazelcast.usercode.*;
 
 import java.util.concurrent.ExecutionException;
@@ -30,9 +29,7 @@ public class UserCodeStepProvider implements StepProvider {
     public TransformStep[] getTransforms() {
 
         return new TransformStep[] {
-                new TransformStep("user-code", UserCodeStepProvider::transform),
-                new TransformStep("user-code-from-entry", UserCodeStepProvider::mapEntryToBuffers),
-                new TransformStep("user-code-to-entry", UserCodeStepProvider::mapBuffersToEntry)
+                new TransformStep("user-code", UserCodeStepProvider::transform)
         };
     }
 
@@ -153,44 +150,5 @@ public class UserCodeStepProvider implements StepProvider {
         catch (InterruptedException | ExecutionException ex) {
             // TODO: what shall we do?
         }
-    }
-
-    private static Object mapEntryToBuffers(Object stageContext, String name, YamlMapping properties, ILogger logger) throws JobBuilderException {
-
-        StreamStage streamStage = stageContext instanceof StreamStage ? (StreamStage) stageContext : null;
-        if (streamStage == null) {
-            throw new JobBuilderException("panic: unsupported stage type " + stageContext.toString());
-        }
-
-        return streamStage.map(x -> {
-            DeserializingEntry entry = (DeserializingEntry) x;
-            Data[] data = DeserializingEntryExtensions.getData(entry);
-            byte[][] buffers = new byte[data.length][];
-            for (int i = 0; i < data.length; i++) {
-                buffers[i] = data[i].toByteArray();
-            }
-            return buffers;
-        });
-    }
-
-    private static Object mapBuffersToEntry(Object stageContext, String name, YamlMapping properties, ILogger logger) throws JobBuilderException {
-
-        // FIXME: this is not pretty and duplicated, wtf?
-        StreamStage streamStage = stageContext instanceof StreamStage ? (StreamStage) stageContext : null;
-        if (streamStage == null) {
-            throw new JobBuilderException("panic: unsupported stage type " + stageContext.toString());
-        }
-
-        return streamStage.map(x -> {
-            byte[][] buffers = (byte[][]) x; // FIXME: better error management?
-            Data[] data = new Data[buffers.length];
-            for (int i = 0; i < buffers.length; i++) {
-                data[i] = new HeapData(buffers[i]);
-            }
-            // FIXME we need the original entry for its serialization service, or?
-            // or... DeserializingEntry being IdentifiedDataSerializable, we just pass it around?!
-            // and then... the message is only ONE single byte[] buffer? aka payload?
-            return DeserializingEntryExtensions.createNew(/*entry*/ null, data);
-        });
     }
 }

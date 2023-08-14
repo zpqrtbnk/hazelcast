@@ -1,11 +1,11 @@
-package com.hazelcast.jet.yaml;
+package com.hazelcast.jet.jobbuilder;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.internal.yaml.YamlMapping;
 import com.hazelcast.jet.pipeline.*;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.oop.compile.InMemoryFileManager;
-import com.hazelcast.oop.compile.JavaSourceFromString;
+import com.hazelcast.usercode.compile.InMemoryFileManager;
+import com.hazelcast.usercode.compile.JavaSourceFromString;
 
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
@@ -79,6 +79,7 @@ public class BuiltinStepProvider implements StepProvider {
         return stageContext;
     }
 
+    // highly experimental and won't work on viridian of course
     private static Object lambda(Object stageContext, String name, YamlMapping properties, ILogger logger) throws JobBuilderException {
 
         String expression = YamlUtils.getProperty(properties, "expr");

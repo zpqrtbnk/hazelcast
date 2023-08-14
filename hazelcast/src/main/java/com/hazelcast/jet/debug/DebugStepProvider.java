@@ -1,7 +1,7 @@
 package com.hazelcast.jet.debug;
 
 import com.hazelcast.internal.yaml.YamlMapping;
-import com.hazelcast.jet.yaml.*;
+import com.hazelcast.jet.jobbuilder.*;
 import com.hazelcast.logging.ILogger;
 
 public class DebugStepProvider implements StepProvider {

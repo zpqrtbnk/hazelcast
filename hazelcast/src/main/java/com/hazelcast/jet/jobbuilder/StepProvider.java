@@ -14,13 +14,17 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.yaml;
+package com.hazelcast.jet.jobbuilder;
 
-// a function accepting three parameters, that can throw a JobBuilderException
-@FunctionalInterface
-public interface Function3<T, U, V, R> {
+// provides steps for the JobBuilder
+public interface StepProvider {
 
-    // applies the function to the parameters and returns the result
-    R apply(T t, U u, V v) throws JobBuilderException;
+    // gets the source steps, or null if none are provided
+    SourceStep[] getSources();
+
+    // gets the transform steps, or null if none are provided
+    TransformStep[] getTransforms();
+
+    // gets the sink steps, or null if none are provided
+    SinkStep[] getSinks();
 }
-

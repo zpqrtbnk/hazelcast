@@ -14,17 +14,12 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.yaml;
+package com.hazelcast.jet.jobbuilder;
 
-// provides steps for the JobBuilder
-public interface StepProvider {
+// a consumer accepting four parameters, that can throw a JobBuilderException
+@FunctionalInterface
+public interface Consumer4<T, U, V, W> {
 
-    // gets the source steps, or null if none are provided
-    SourceStep[] getSources();
-
-    // gets the transform steps, or null if none are provided
-    TransformStep[] getTransforms();
-
-    // gets the sink steps, or null if none are provided
-    SinkStep[] getSinks();
+    // accepts parameters
+    void accept(T t, U u, V v, W w) throws JobBuilderException;
 }

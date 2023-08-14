@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.yaml;
+package com.hazelcast.jet.jobbuilder;
 
-// represents the exception throws by the JobBuilder when it fails to build a job
-public final class JobBuilderException extends Exception {
+// a function accepting four parameters, that can throw a JobBuilderException
+@FunctionalInterface
+public interface Function4<T, U, V, W, R> {
 
-    public JobBuilderException(String message) {
-
-        super(message);
-    }
+    // applies the function to the parameters, and returns the result
+    R apply(T t, U u, V v, W w) throws JobBuilderException;
 }

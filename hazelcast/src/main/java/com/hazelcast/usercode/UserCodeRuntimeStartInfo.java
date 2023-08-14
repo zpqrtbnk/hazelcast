@@ -1,9 +1,9 @@
 package com.hazelcast.usercode;
 
+import com.hazelcast.internal.util.OsHelper;
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.config.ResourceType;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.oop.service.ServiceProcess;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -42,18 +42,20 @@ public final class UserCodeRuntimeStartInfo implements Serializable {
 
         // FIXME should we do this here, or?
         Map<String, String> values = new HashMap<>();
-        values.put("PLATFORM", ServiceProcess.getPlatform());
+        values.put("PLATFORM", getPlatform());
 
-        resourceId = replace("(.|^)\\$([A-Z_]*)", resourceId, m -> {
-            if (m.group(1).equals("\\")) return "$" + m.group(2);
-            String value = values.get(m.group(2));
-            if (value != null) return m.group(1) + value;
-            return m.group();
-        });
+        String originResourceId = resourceId;
+        resourceId = replace(resourceId, values);
 
         // recreate resource
         Map<String, ResourceConfig> resources = processorContext.jobConfig().getResourceConfigs();
         ResourceConfig resource = resources.get(resourceId);
+        if (resource == null && !resourceId.equals(originResourceId)) {
+            // try again with 'any' platform
+            values.put("PLATFORM", "any");
+            resourceId = replace(originResourceId, values);
+            resource = resources.get(resourceId);
+        }
         if (resource == null) {
             throw new UserCodeException("Missing resource with id '" + resourceId + "'.");
         }
@@ -61,6 +63,15 @@ public final class UserCodeRuntimeStartInfo implements Serializable {
             throw new UserCodeException("Resource with id '" + resourceId + "' is not a directory.");
         }
         return processorContext.recreateAttachedDirectory(resourceId).toString();
+    }
+
+    private static String replace(String source, Map<String, String> values) {
+        return replace("(.|^)\\$([A-Z_]*)", source, m -> {
+            if (m.group(1).equals("\\")) return "$" + m.group(2);
+            String value = values.get(m.group(2));
+            if (value != null) return m.group(1) + value;
+            return m.group();
+        });
     }
 
     private static String replace(String pattern, String source, Function<Matcher, String> handler) {
@@ -85,5 +96,22 @@ public final class UserCodeRuntimeStartInfo implements Serializable {
         }
         sb.append(source, pos, source.length());
         return sb.toString();
+    }
+
+    private static String getPlatform() {
+        // note: missing other OS (solaris...) here
+        String os =
+            OsHelper.isWindows() ? "win" :
+            OsHelper.isLinux() ? "linux" :
+            OsHelper.isMac() ? "osx" :
+            "any";
+
+        // note: missing other architectures (aarch64, ppc...) here
+        String arch = System.getProperty("os.arch");
+        if (arch.equals("amd64")) arch = "x64";
+        if (arch.equals("x86_32")) arch = "x86";
+        if (arch.equals("x86_64")) arch = "x64";
+
+        return os + "-" + arch;
     }
 }

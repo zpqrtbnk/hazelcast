@@ -1,4 +1,4 @@
-package com.hazelcast.jet.yaml;
+package com.hazelcast.jet.jobbuilder;
 
 import com.hazelcast.internal.yaml.YamlMapping;
 import com.hazelcast.logging.ILogger;
