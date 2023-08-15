@@ -5,7 +5,7 @@ import com.hazelcast.internal.serialization.SerializationServiceAware;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.usercode.*;
 import com.hazelcast.usercode.runtimes.UserCodeContainerRuntime;
-import com.hazelcast.usercode.transports.grpc.UserCodeGrpcTransport;
+import com.hazelcast.usercode.transports.grpc.GrpcTransport;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -42,7 +42,7 @@ public final class UserCodeContainerService implements UserCodeService, Serializ
         int port = 80;
 
         return startRuntime().thenApply(x -> {
-            UserCodeTransport transport = new UserCodeGrpcTransport(address, port); // FIXME args?
+            UserCodeTransport transport = new GrpcTransport(address, port, null); // FIXME args?
             UserCodeRuntime runtime = new UserCodeContainerRuntime(this, transport, serializationService, containerId);
             return runtime;
         });

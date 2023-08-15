@@ -14,7 +14,6 @@ public class UserCodeProcessRuntime extends UserCodeRuntimeBase {
 
         super(userCodeService, transport, serializationService);
         this.process = process;
-        transport.setReceiver(this);
     }
 
     public void destroy() {

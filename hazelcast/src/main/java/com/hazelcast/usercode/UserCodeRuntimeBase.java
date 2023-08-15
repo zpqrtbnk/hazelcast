@@ -11,10 +11,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
-public abstract class UserCodeRuntimeBase implements UserCodeRuntime, UserCodeTransportReceiver {
+public abstract class UserCodeRuntimeBase implements UserCodeRuntime {
 
     private final UserCodeService userCodeService;
-    private final Map<Long, CompletableFuture<byte[]>> futures = new HashMap<>();
     private final AtomicLong ids = new AtomicLong();
     private final UserCodeTransport transport;
     private final SerializationService serializationService;
@@ -37,6 +36,12 @@ public abstract class UserCodeRuntimeBase implements UserCodeRuntime, UserCodeTr
     }
 
     @Override
+    public CompletableFuture<?> invoke(String functionName, Object input) {
+        byte[] payload = input == null ? new byte[0] : serializationService.toData(input).toByteArray();
+        return invoke(functionName, payload).thenApply(x -> serializationService.toObject(new HeapData(x)));
+    }
+
+    @Override
     public CompletableFuture<Data> invoke(String functionName, Data payload) {
         return invoke(functionName, payload.toByteArray()).thenApply(HeapData::new);
     }
@@ -44,34 +49,17 @@ public abstract class UserCodeRuntimeBase implements UserCodeRuntime, UserCodeTr
     @Override
     public CompletableFuture<byte[]> invoke(String functionName, byte[] payload) {
 
-        // TODO:
-        //  - what about timeouts? can we leak?
-
-        // using gRPC... each call is one unique ? what's 'streaming' RPC?
-        // and using shared memory, how should it work?
-        // one loop monitoring the shmem, and assigning tasks to threads?
-        // and, client-side, one loop monitoring the shmem and completing invocations
-
         long id = ids.getAndIncrement();
         UserCodeMessage message = new UserCodeMessage(id, functionName, payload);
-        transport.send(message);
-        CompletableFuture<byte[]> future = new CompletableFuture<>();
-        futures.put(id, future);
-        return future;
-    }
 
-    @Override
-    public void receive(UserCodeMessage message) {
-
-        CompletableFuture<byte[]> future = futures.get(message.getId());
-        futures.remove(message.getId());
-
-        if (message.isException()) {
-            byte[] payload = message.getPayload();
-            String exceptionMessage = "Runtime exception." + (payload == null ? "" : " " + new String(payload, StandardCharsets.UTF_8));
-            future.completeExceptionally(new UserCodeException(exceptionMessage));
-        } else {
-            future.complete(message.getPayload());
-        }
+        return transport.invoke(message).thenApply(m -> {
+            if (m.isException()) {
+                byte[] exceptionMessageBytes = m.getPayload();
+                String exceptionMessage = "Runtime exception." + (exceptionMessageBytes == null ? "" : " " + new String(exceptionMessageBytes, StandardCharsets.UTF_8));
+                throw new UserCodeException(exceptionMessage);
+            } else {
+                return m.getPayload();
+            }
+        });
     }
 }

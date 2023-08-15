@@ -103,12 +103,13 @@ public class UserCodeStepProvider implements StepProvider {
                 .mapUsingServiceAsync(serviceFactory, parallelOperations, preserveOrder, (service, input) -> {
 
                     UserCodeRuntime runtime = (UserCodeRuntime) service;
-                    if (runtime == null) throw new UserCodeException("null runtime"); // FIXME <-- here?
-                    if (runtime.getSerializationService() == null) throw new UserCodeException("null serialization"); // FIXME
-                    Data payload = runtime.getSerializationService().toData(input);
-                    return runtime.invoke(functionName, payload).thenApply(x -> {
-                        return runtime.getSerializationService().toObject(x); // FIXME or should this be explicit?
-                    });
+                    return runtime.invoke(functionName, input);
+                    //if (runtime == null) throw new UserCodeException("null runtime"); // FIXME <-- here?
+                    //if (runtime.getSerializationService() == null) throw new UserCodeException("null serialization"); // FIXME
+                    //Data payload = runtime.getSerializationService().toData(input);
+                    //return runtime.invoke(functionName, payload).thenApply(x -> {
+                    //    return runtime.getSerializationService().toObject(x); // FIXME or should this be explicit?
+                    //});
                 })
                 .setLocalParallelism(parallelProcessors)
                 .setName(transformName);

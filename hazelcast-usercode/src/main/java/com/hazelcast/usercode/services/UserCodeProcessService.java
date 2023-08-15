@@ -2,10 +2,12 @@ package com.hazelcast.usercode.services;
 
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.serialization.SerializationServiceAware;
+import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.Logger;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.usercode.*;
 import com.hazelcast.usercode.runtimes.UserCodeProcessRuntime;
-import com.hazelcast.usercode.transports.grpc.UserCodeGrpcTransport;
+import com.hazelcast.usercode.transports.grpc.GrpcTransport;
 import com.hazelcast.usercode.transports.sharedmemory.SharedMemoryTransport;
 
 import java.io.File;
@@ -16,11 +18,13 @@ import java.util.concurrent.CompletableFuture;
 public final class UserCodeProcessService implements UserCodeService, SerializationServiceAware {
 
     private final LoggingService logging;
+    private final ILogger logger;
     private SerializationService serializationService;
 
     public UserCodeProcessService(LoggingService logging) {
 
         this.logging = logging;
+        this.logger = logging.getLogger(UserCodeProcessService.class);
     }
 
     @Override
@@ -49,6 +53,7 @@ public final class UserCodeProcessService implements UserCodeService, Serializat
         String directory = startInfo.get("directory", processPath);
 
         // start the process
+        logger.info("Start process " + processPath + File.separator + processName);
         UserCodeProcess process = new UserCodeProcess(name, logging)
                 .directory(directory)
                 .command(processPath + File.separator + processName, uniqueId.toString())
@@ -59,11 +64,12 @@ public final class UserCodeProcessService implements UserCodeService, Serializat
         String transportMode = startInfo.get("transport");
         switch (transportMode) {
             case "grpc":
+                String address = startInfo.get("transport-address", "localhost");
                 int port = startInfo.get("transport-port", 80);
-                transport = new UserCodeGrpcTransport("localhost", port);
+                transport = new GrpcTransport(address, port, logging);
                 break;
             case "shared-memory":
-                transport = new SharedMemoryTransport(uniqueId);
+                transport = new SharedMemoryTransport(uniqueId, logging);
                 break;
             default:
                 throw new UserCodeException("Unsupported transport mode '" + transportMode + "'.");
@@ -71,7 +77,7 @@ public final class UserCodeProcessService implements UserCodeService, Serializat
 
         // create the runtime (which declares itself as a receiver of the transport)
         UserCodeProcessRuntime runtime = new UserCodeProcessRuntime(this, transport, serializationService, process);
-        transport.open(); // FIXME could this be async? should this be runtime.connect()?
+        transport.open(); // FIXME could this be async? should this be runtime.connect()? runtime.connectTransport()?
         return CompletableFuture.completedFuture(runtime);
     }
 

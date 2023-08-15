@@ -7,16 +7,10 @@ option java_outer_classname = "TransportTopLevel";
 package usercode;
 
 service Transport {
-  rpc send (stream InputMessage) returns (stream OutputMessage) {}
+  rpc invoke (stream UserCodeGrpcMessage) returns (stream UserCodeGrpcMessage) {}
 }
 
-message InputMessage {
-  int64 id = 1;
-  string functionName = 2;
-  bytes payload = 3;
-}
-
-message OutputMessage {
+message UserCodeGrpcMessage {
   int64 id = 1;
   string functionName = 2;
   bytes payload = 3;

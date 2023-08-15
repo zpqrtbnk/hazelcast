@@ -1,4 +1,6 @@
-package com.hazelcast.usercode;
+package com.hazelcast.usercode.transports.sharedmemory;
+
+import com.hazelcast.usercode.UserCodeMessage;
 
 // represents a class that can receive transport messages
 public interface UserCodeTransportReceiver {

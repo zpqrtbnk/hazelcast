@@ -5,11 +5,9 @@ import java.util.concurrent.CompletableFuture;
 // represents a UserCode transport
 public interface UserCodeTransport {
 
-    void setReceiver(UserCodeTransportReceiver receiver);
-
     CompletableFuture<Void> open();
 
-    CompletableFuture<Void> send(UserCodeMessage message);
+    CompletableFuture<UserCodeMessage> invoke(UserCodeMessage message);
 
     void destroy();
 }

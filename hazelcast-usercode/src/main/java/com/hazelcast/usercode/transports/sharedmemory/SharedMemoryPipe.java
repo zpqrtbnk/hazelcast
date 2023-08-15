@@ -2,10 +2,8 @@ package com.hazelcast.usercode.transports.sharedmemory;
 
 import com.hazelcast.usercode.UserCodeException;
 import com.hazelcast.usercode.UserCodeMessage;
-import com.hazelcast.usercode.UserCodeTransportReceiver;
 
 import java.io.IOException;
-import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;

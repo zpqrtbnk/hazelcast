@@ -17,13 +17,19 @@ public interface UserCodeRuntime  {
 
     // invokes a runtime function
     // functionName: the name of the function
+    // payload: the request object
+    // returns: the response object
+    CompletableFuture<?> invoke(String functionName, Object payload);
+
+    // invokes a runtime function
+    // functionName: the name of the function
     // payload: the request data
     // returns: the response data
     CompletableFuture<Data> invoke(String functionName, Data payload);
 
     // invokes a runtime function
     // functionName: the name of the function
-    // payload: the request data
-    // returns: the response data
+    // payload: the request bytes
+    // returns: the response bytes
     CompletableFuture<byte[]> invoke(String functionName, byte[] payload);
 }
