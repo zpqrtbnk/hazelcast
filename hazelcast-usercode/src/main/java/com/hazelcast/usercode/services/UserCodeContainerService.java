@@ -2,41 +2,38 @@ package com.hazelcast.usercode.services;
 
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.serialization.SerializationServiceAware;
+import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.usercode.*;
 import com.hazelcast.usercode.runtimes.UserCodeContainerRuntime;
 import com.hazelcast.usercode.transports.grpc.GrpcTransport;
 
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 // a UserCodeService that talks to the UserCodeController API and executes each runtime in a separate container
-public final class UserCodeContainerService implements UserCodeService, SerializationServiceAware {
+public final class UserCodeContainerService extends UserCodeServiceBase {
 
     // TODO: implement this, Emre is currently working on it
     // TODO: implement logging when container starts and stops etc
 
-    private final LoggingService logging;
-    private SerializationService serializationService;
+    private final ILogger logger;
 
     public UserCodeContainerService(LoggingService logging) {
-
-        this.logging = logging;
-    }
-
-    @Override
-    public void setSerializationService(SerializationService serializationService) {
-        this.serializationService = serializationService;
+        super(logging);
+        this.logger = logging.getLogger(UserCodeContainerService.class);
     }
 
     @Override
     public CompletableFuture<UserCodeRuntime> startRuntime(String name, UserCodeRuntimeStartInfo startInfo) throws UserCodeException {
 
-        String mode = startInfo.get("mode");
-        if (!"container".equals(mode)) {
-            throw new UserCodeException("Cannot start a mode '" + mode + "' runtime, expecting mode 'container'.");
-        }
+        ensureMode("container", startInfo);
 
-        String image = startInfo.get("image");
+        // allocate the runtime unique identifier
+        UUID uniqueId = UUID.randomUUID();
+        startInfo.set("uid", uniqueId);
+
+        String image = startInfo.get("container-image");
         String containerId = ""; // FIXME maybe we get it from startRuntime?
         String address = "";
         int port = 80;

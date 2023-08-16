@@ -115,16 +115,17 @@ public class UserCodeStepProvider implements StepProvider {
                 .setName(transformName);
     }
 
-    private static UserCodeRuntime startUserCodeRuntime(ProcessorSupplier.Context processorContext, String name, UserCodeRuntimeStartInfo runtimeStartInfo) {
+    private static UserCodeRuntime startUserCodeRuntime(ProcessorSupplier.Context processorContext, String name, UserCodeRuntimeStartInfo startInfo) {
 
         // TODO: implement this - should be some sort of static user code service?!
         //UserCodeService userCodeService = processorContext.hazelcastInstance().getUserCodeService();
         LoggingService logging = processorContext.hazelcastInstance().getLoggingService();
-        UserCodeService userCodeService = UserCodeServiceFactory.getService(logging);
+        String mode = startInfo.get("mode");
+        UserCodeService userCodeService = UserCodeServiceFactory.getService(mode, logging);
         processorContext.managedContext().initialize(userCodeService); // will need the serialization service
 
         // will need it for resources
-        runtimeStartInfo.setProcessorContext(processorContext);
+        startInfo.setProcessorContext(processorContext);
 
         // complement name, name does not have to be unique, user code service will manage it
         long jobId = processorContext.jobId();
@@ -132,7 +133,7 @@ public class UserCodeStepProvider implements StepProvider {
 
         try {
             // TODO: ??
-            UserCodeRuntime runtime = userCodeService.startRuntime(name, runtimeStartInfo).get();
+            UserCodeRuntime runtime = userCodeService.startRuntime(name, startInfo).get();
             //runtime.copyTo(localFilePath, targetFilePath).get();
             //runtime.invoke("HZ-COPY-TO", ...)
             return runtime;

@@ -15,15 +15,13 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 // a UserCodeService that executes each runtime in a separate process
-public final class UserCodeProcessService implements UserCodeService, SerializationServiceAware {
+public final class UserCodeProcessService extends UserCodeServiceBase {
 
-    private final LoggingService logging;
     private final ILogger logger;
-    private SerializationService serializationService;
 
     public UserCodeProcessService(LoggingService logging) {
 
-        this.logging = logging;
+        super(logging);
         this.logger = logging.getLogger(UserCodeProcessService.class);
     }
 
@@ -35,13 +33,11 @@ public final class UserCodeProcessService implements UserCodeService, Serializat
     @Override
     public CompletableFuture<UserCodeRuntime> startRuntime(String name, UserCodeRuntimeStartInfo startInfo) throws UserCodeException {
 
-        String mode = startInfo.get("mode");
-        if (!"process".equals(mode)) {
-            throw new UserCodeException("Cannot start a mode '" + mode + "' runtime, expecting mode 'process'.");
-        }
+        ensureMode("process", startInfo);
 
         // allocate the runtime unique identifier
         UUID uniqueId = UUID.randomUUID();
+        startInfo.set("uid", uniqueId);
 
         // run <processPath>/<processName> in <directory>
         String processName = startInfo.get("process-name");
@@ -60,20 +56,7 @@ public final class UserCodeProcessService implements UserCodeService, Serializat
                 .start();
 
         // create the transport
-        UserCodeTransport transport;
-        String transportMode = startInfo.get("transport");
-        switch (transportMode) {
-            case "grpc":
-                String address = startInfo.get("transport-address", "localhost");
-                int port = startInfo.get("transport-port", 80);
-                transport = new GrpcTransport(address, port, logging);
-                break;
-            case "shared-memory":
-                transport = new SharedMemoryTransport(uniqueId, logging);
-                break;
-            default:
-                throw new UserCodeException("Unsupported transport mode '" + transportMode + "'.");
-        }
+        UserCodeTransport transport = createTransport(startInfo);
 
         // create the runtime (which declares itself as a receiver of the transport)
         UserCodeProcessRuntime runtime = new UserCodeProcessRuntime(this, transport, serializationService, process);
