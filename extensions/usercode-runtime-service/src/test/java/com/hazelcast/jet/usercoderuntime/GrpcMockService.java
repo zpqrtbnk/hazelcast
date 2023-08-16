@@ -15,35 +15,35 @@
  */
 package com.hazelcast.jet.usercoderuntime;
 
+import com.hazelcast.jet.usercoderuntime.impl.ControllerGrpc;
+import com.hazelcast.jet.usercoderuntime.impl.CreateRequest;
+import com.hazelcast.jet.usercoderuntime.impl.CreateResponse;
+import com.hazelcast.jet.usercoderuntime.impl.DeleteRequest;
 import com.hazelcast.jet.usercoderuntime.impl.Empty;
-import com.hazelcast.jet.usercoderuntime.impl.JetToRuntimeControllerGrpc;
-import com.hazelcast.jet.usercoderuntime.impl.RuntimeDestroyRequest;
-import com.hazelcast.jet.usercoderuntime.impl.RuntimeRequest;
-import com.hazelcast.jet.usercoderuntime.impl.RuntimeResponse;
 import io.grpc.stub.StreamObserver;
 import java.util.function.Function;
 
-public class GrpcMockService extends JetToRuntimeControllerGrpc.JetToRuntimeControllerImplBase {
+public class GrpcMockService extends ControllerGrpc.ControllerImplBase {
 
-    private Function<RuntimeRequest, RuntimeResponse> createFn;
-    private Function<RuntimeDestroyRequest, Empty> destroyFn;
+    private Function<CreateRequest, CreateResponse> createFn;
+    private Function<DeleteRequest, Empty> destroyFn;
 
-    public void setCreateFn(Function<RuntimeRequest, RuntimeResponse> createFn) {
+    public void setCreateFn(Function<CreateRequest, CreateResponse> createFn) {
         this.createFn = createFn;
     }
 
-    public void setDestroyFn(Function<RuntimeDestroyRequest, Empty> destroyFn) {
+    public void setDestroyFn(Function<DeleteRequest, Empty> destroyFn) {
         this.destroyFn = destroyFn;
     }
 
     @Override
-    public void create(RuntimeRequest request, StreamObserver<RuntimeResponse> responseObserver) {
+    public void create(CreateRequest request, StreamObserver<CreateResponse> responseObserver) {
         responseObserver.onNext(createFn.apply(request));
         responseObserver.onCompleted();
     }
 
     @Override
-    public void destroy(RuntimeDestroyRequest request, StreamObserver<Empty> responseObserver) {
+    public void delete(DeleteRequest request, StreamObserver<Empty> responseObserver) {
         responseObserver.onNext(destroyFn.apply(request));
         responseObserver.onCompleted();
     }

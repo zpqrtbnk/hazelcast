@@ -16,66 +16,83 @@
 
 package com.hazelcast.jet.usercoderuntime;
 
+import com.hazelcast.internal.util.Preconditions;
+import com.hazelcast.spi.properties.HazelcastProperties;
+
+import java.util.Properties;
+
 /**
  *
  */
 public class RuntimeConfig {
 
-    private UserCodeRuntimeType runtimeType;
-    private UserCodeCommunicationType communicationType;
+    private RuntimeType runtimeType;
+    private RuntimeTransportType communicationType;
     private String imageName;
-    private int listeningPort;
+    private int port;
+    private HazelcastProperties properties = new HazelcastProperties(new Properties());
 
     /**
-     *
      * @return
      */
-    public int getListeningPort() {
-        return listeningPort;
+    public HazelcastProperties getProperties() {
+        return properties;
     }
 
     /**
-     *
-     * @param listeningPort
+     * @param properties
      */
-    public void setListeningPort(int listeningPort) {
-        this.listeningPort = listeningPort;
+    public RuntimeConfig setProperties(HazelcastProperties properties) {
+        this.properties = Preconditions.isNotNull(properties, "properties");
+        return this;
     }
 
     /**
-     *
      * @return
      */
-    public UserCodeCommunicationType getCommunicationType() {
+    public int getPort() {
+        return port;
+    }
+
+    /**
+     * @param port
+     */
+    public RuntimeConfig setPort(int port) {
+        this.port = Preconditions.checkPortValid(port);
+        return this;
+    }
+
+    /**
+     * @return
+     */
+    public RuntimeTransportType getCommunicationType() {
         return communicationType;
     }
 
     /**
-     *
      * @param communicationType
      */
-    public void setCommunicationType(UserCodeCommunicationType communicationType) {
+    public RuntimeConfig setCommunicationType(RuntimeTransportType communicationType) {
         this.communicationType = communicationType;
+        return this;
     }
 
     /**
-     *
      * @return
      */
-    public UserCodeRuntimeType getRuntimeType() {
+    public RuntimeType getRuntimeType() {
         return runtimeType;
     }
 
     /**
-     *
      * @param runtimeType
      */
-    public void setRuntimeType(UserCodeRuntimeType runtimeType) {
+    public RuntimeConfig setRuntimeType(RuntimeType runtimeType) {
         this.runtimeType = runtimeType;
+        return this;
     }
 
     /**
-     *
      * @return
      */
     public String getImageName() {
@@ -84,10 +101,10 @@ public class RuntimeConfig {
 
 
     /**
-     *
      * @param imageName
      */
-    public void setImageName(String imageName) {
-        this.imageName = imageName;
+    public RuntimeConfig setImageName(String imageName) {
+        this.imageName = Preconditions.checkHasText(imageName, "imageName");
+        return this;
     }
 }

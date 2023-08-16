@@ -13,6 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.hazelcast.jet.usercoderuntime;
 
-
+/**
+ *
+ */
+public enum RuntimeTransportType {
+    /**
+     * The communication to the user code runtime instance is GRPC.
+     */
+    GRPC
+}

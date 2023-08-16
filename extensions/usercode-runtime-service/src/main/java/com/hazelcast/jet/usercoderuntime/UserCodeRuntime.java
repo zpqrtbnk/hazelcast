@@ -17,14 +17,13 @@
 package com.hazelcast.jet.usercoderuntime;
 
 import com.hazelcast.internal.serialization.Data;
-
 import java.util.List;
-import java.util.concurrent.Future;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * The client interface to call user function in user code runtime container.
  */
-public interface IUserCodeRuntime {
+public interface UserCodeRuntime {
 
     /**
      * Sends the payload to user function and returns the result of the invocation on user code runtime container.
@@ -33,38 +32,44 @@ public interface IUserCodeRuntime {
      * @return Result of invocation of the user function.
      * @since 5.4
      */
-    Future<Data> invoke(Data payload);
+    CompletableFuture<Data> invoke(Data payload);
 
     /**
      * Sends the list of payload to user function and returns the result of the invocation on user code runtime container.
      *
      * @param payloads Serialized list of data to be passed to user function.
-     * @return Result of invocation of the user function.
+     * @return Results of invocation of the user function.
      * @since 5.4
      */
-    Future<List<Data>> invoke(List<Data> payloads);
-
-    /**
-     * Sets configuration object by passing given payload in the user code runtime.
-     *
-     * @param payload
-     * @since 5.4
-     * @return
-     */
-    Future setRuntimeObject(Data payload);
+    CompletableFuture<List<Data>> invoke(List<Data> payloads);
 
     /**
      * Gets communication type of between the instance and user code runtime container.
      *
      * @since 5.4
      */
-    UserCodeCommunicationType getCommunicationType();
+    RuntimeTransportType getTransportType();
 
     /**
      * Gets runtime type of the user code runtime container.
      *
      * @since 5.4
      */
-    UserCodeRuntimeType getRuntimeType();
+    RuntimeType getRuntimeType();
+
+    /**
+     * Gets the cluster-wide unique name of the user code runtime. The name can be used as address in K8s.
+     *
+     * @since 5.4
+     */
+    String getName();
+
+    /**
+     * Destroys ONLY the object and releases the resources. To kill the runtime,
+     * {@code  com.hazelcast.jet.usercoderuntime.impl.UserCodeRuntimeService.destroyRuntimeAsync()} should be invoked.
+     *
+     * @since 5.4
+     */
+    void destroy();
 }
 
