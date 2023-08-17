@@ -24,6 +24,10 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.usercoderuntime.UserCodeRuntime;
 import com.hazelcast.jet.usercoderuntime.RuntimeConfig;
 import com.hazelcast.jet.usercoderuntime.RuntimeServiceConfig;
+import com.hazelcast.jet.usercoderuntime.impl.controller.ControllerGrpc;
+import com.hazelcast.jet.usercoderuntime.impl.controller.CreateRequest;
+import com.hazelcast.jet.usercoderuntime.impl.controller.CreateResponse;
+import com.hazelcast.jet.usercoderuntime.impl.controller.DeleteRequest;
 import com.hazelcast.spi.properties.ClusterProperty;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -101,6 +105,7 @@ public final class UserCodeRuntimeService {
                 .build();
 
         CreateResponse result = stubBlocking.create(request);
+        // Add check when other type of transport introduced-> GRPC, Shared Memory
         UserCodeRuntimeGrpcImpl runtime = new UserCodeRuntimeGrpcImpl(context, result, config);
 
         return runtime;
@@ -115,7 +120,7 @@ public final class UserCodeRuntimeService {
      * @since 5.4
      */
     public Future destroyRuntimeAsync(String name) {
-
+    // TODO: refactor to stream observer to handle errors.
         DeleteRequest request = DeleteRequest
                 .newBuilder()
                 .setName(name)

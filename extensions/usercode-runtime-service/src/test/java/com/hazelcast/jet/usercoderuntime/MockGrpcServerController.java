@@ -15,15 +15,15 @@
  */
 package com.hazelcast.jet.usercoderuntime;
 
-import com.hazelcast.jet.usercoderuntime.impl.ControllerGrpc;
-import com.hazelcast.jet.usercoderuntime.impl.CreateRequest;
-import com.hazelcast.jet.usercoderuntime.impl.CreateResponse;
-import com.hazelcast.jet.usercoderuntime.impl.DeleteRequest;
-import com.hazelcast.jet.usercoderuntime.impl.Empty;
+import com.hazelcast.jet.usercoderuntime.impl.controller.ControllerGrpc;
+import com.hazelcast.jet.usercoderuntime.impl.controller.CreateRequest;
+import com.hazelcast.jet.usercoderuntime.impl.controller.CreateResponse;
+import com.hazelcast.jet.usercoderuntime.impl.controller.DeleteRequest;
+import com.hazelcast.jet.usercoderuntime.impl.controller.Empty;
 import io.grpc.stub.StreamObserver;
 import java.util.function.Function;
 
-public class GrpcMockService extends ControllerGrpc.ControllerImplBase {
+public class MockGrpcServerController extends ControllerGrpc.ControllerImplBase {
 
     private Function<CreateRequest, CreateResponse> createFn;
     private Function<DeleteRequest, Empty> destroyFn;

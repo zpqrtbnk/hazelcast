@@ -26,6 +26,12 @@ import com.hazelcast.jet.usercoderuntime.RuntimeConfig;
 import com.hazelcast.jet.usercoderuntime.UserCodeRuntime;
 import com.hazelcast.jet.usercoderuntime.RuntimeType;
 import com.hazelcast.jet.usercoderuntime.RuntimeTransportType;
+import com.hazelcast.jet.usercoderuntime.impl.controller.CreateResponse;
+import com.hazelcast.jet.usercoderuntime.impl.runtime.InputListOfMessage;
+import com.hazelcast.jet.usercoderuntime.impl.runtime.InputMessage;
+import com.hazelcast.jet.usercoderuntime.impl.runtime.JetToUserCodeRuntimeGrpc;
+import com.hazelcast.jet.usercoderuntime.impl.runtime.OutputListOfMessage;
+import com.hazelcast.jet.usercoderuntime.impl.runtime.OutputMessage;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.properties.ClusterProperty;
 import io.grpc.ManagedChannel;
@@ -45,7 +51,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 /**
  * Implements the {@link UserCodeRuntime} as grpc client. It establishes a GRPC connection between {@link UserCodeRuntime}
  * object and remote User Code Runtime Container, and manages the stream. You do not deal with this class directly.
- * {@link UserCodeRuntimeService} initializes it based on given config.
+ * {@link UserCodeRuntimeService} initializes it based on given config and response from User Code Runtime Controller
+ * in the cluster.
  *
  * @since 5.4
  */
@@ -237,7 +244,7 @@ class UserCodeRuntimeGrpcImpl implements UserCodeRuntime {
         @Override
         public void onNext(OutputMessage outputItem) {
             try {
-                futureSingleQueue.remove().complete(new HeapData(outputItem.toByteArray()));
+                futureSingleQueue.remove().complete(new HeapData(outputItem.getPayLoad().toByteArray()));
             } catch (Throwable e) {
                 exceptionInOutputObserver = e;
                 completionLatch.countDown();
