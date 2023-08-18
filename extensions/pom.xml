@@ -47,7 +47,7 @@
         <module>kinesis</module>
         <module>mapstore</module>
         <module>mongodb</module>
-        <module>usercode-runtime-service</module>
+        <module>usercode-runtime</module>
         <module>s3</module>
     </modules>
 
