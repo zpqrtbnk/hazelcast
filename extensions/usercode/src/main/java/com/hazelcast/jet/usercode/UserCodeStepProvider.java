@@ -1,12 +1,5 @@
 package com.hazelcast.jet.usercode;
 
-import com.hazelcast.internal.journal.DeserializingEntry;
-import com.hazelcast.internal.serialization.Data;
-import com.hazelcast.internal.serialization.impl.HeapData;
-import com.hazelcast.internal.yaml.YamlMapping;
-import com.hazelcast.internal.yaml.YamlNameNodePair;
-import com.hazelcast.internal.yaml.YamlNode;
-import com.hazelcast.internal.yaml.YamlScalar;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.pipeline.ServiceFactory;
@@ -38,28 +31,16 @@ public class UserCodeStepProvider implements StepProvider {
         return null;
     }
 
-    private static Object transform(Object stageContext, String name, YamlMapping properties, ILogger logger) throws JobBuilderException {
+    private static Object transform(Object stageContext, String name, InfoMap definition, ILogger logger) throws JobBuilderException {
 
-        UserCodeRuntimeStartInfo runtimeStartInfo = new UserCodeRuntimeStartInfo();
-        YamlMapping runtimeProperties = properties.childAsMapping("runtime");
-        if (runtimeProperties != null) {
-            for (YamlNameNodePair property : runtimeProperties.childrenPairs()) {
-                YamlNode valueNode = property.childNode();
-                if (valueNode instanceof YamlScalar) {
-                    runtimeStartInfo.set(property.nodeName(), ((YamlScalar) valueNode).nodeValue());
-                }
-                else {
-                    throw new JobBuilderException("unsupported runtime property '" + property.nodeName() + "'type");
-                }
-            }
-        }
+        UserCodeRuntimeInfo runtimeStartInfo = new UserCodeRuntimeInfo(definition.childAsMap("runtime"));
 
-        String functionName = YamlUtils.getProperty(properties,"function");
-        String transformName = YamlUtils.getProperty(properties, "name", "user-code");
-        Boolean preserveOrder = YamlUtils.getProperty(properties, "preserve-order", true);
+        String functionName = definition.childAsString("function");
+        String transformName = definition.childAsString("name", "user-code");
+        Boolean preserveOrder = definition.childAsBoolean("preserve-order", true);
 
-        int parallelProcessors = YamlUtils.getProperty(properties, "parallel-processors", 1);
-        int parallelOperations = YamlUtils.getProperty(properties, "parallel-operations", 1);
+        int parallelProcessors = definition.childAsInteger("parallel-processors", 1);
+        int parallelOperations = definition.childAsInteger("parallel-operations", 1);
 
         StreamStage streamStage = stageContext instanceof StreamStage ? (StreamStage) stageContext : null;
         if (streamStage == null) {
@@ -115,12 +96,17 @@ public class UserCodeStepProvider implements StepProvider {
                 .setName(transformName);
     }
 
-    private static UserCodeRuntime startUserCodeRuntime(ProcessorSupplier.Context processorContext, String name, UserCodeRuntimeStartInfo startInfo) {
+    private static UserCodeRuntime startUserCodeRuntime(ProcessorSupplier.Context processorContext, String name, UserCodeRuntimeInfo startInfo) {
 
         // TODO: implement this - should be some sort of static user code service?!
         //UserCodeService userCodeService = processorContext.hazelcastInstance().getUserCodeService();
         LoggingService logging = processorContext.hazelcastInstance().getLoggingService();
-        String mode = startInfo.get("mode");
+        logging.getLogger(UserCodeStepProvider.class).info("start user code runtime");
+        String mode;
+        if (startInfo.hasChild("process")) mode = "process";
+        else if (startInfo.hasChild("container")) mode = "container";
+        else if (startInfo.hasChild("passthru")) mode = "passthru";
+        else mode = "unknown";
         UserCodeService userCodeService = UserCodeServiceFactory.getService(mode, logging);
         processorContext.managedContext().initialize(userCodeService); // will need the serialization service
 

@@ -1,17 +1,15 @@
 package com.hazelcast.usercode.services;
 
 import com.hazelcast.internal.serialization.SerializationService;
-import com.hazelcast.internal.serialization.SerializationServiceAware;
+import com.hazelcast.jet.jobbuilder.InfoList;
+import com.hazelcast.jet.jobbuilder.InfoMap;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.logging.Logger;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.usercode.*;
 import com.hazelcast.usercode.runtimes.UserCodeProcessRuntime;
-import com.hazelcast.usercode.transports.grpc.GrpcTransport;
-import com.hazelcast.usercode.transports.sharedmemory.SharedMemoryTransport;
 
 import java.io.File;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 // a UserCodeService that executes each runtime in a separate process
@@ -31,28 +29,49 @@ public final class UserCodeProcessService extends UserCodeServiceBase {
     }
 
     @Override
-    public CompletableFuture<UserCodeRuntime> startRuntime(String name, UserCodeRuntimeStartInfo startInfo) throws UserCodeException {
+    public CompletableFuture<UserCodeRuntime> startRuntime(String name, UserCodeRuntimeInfo startInfo) throws UserCodeException {
 
-        ensureMode("process", startInfo);
+        InfoMap processInfo = startInfo.childAsMap("process");
 
         // allocate the runtime unique identifier
         UUID uniqueId = UUID.randomUUID();
-        startInfo.set("uid", uniqueId);
+        startInfo.setChild("uid", uniqueId);
+
+        Map<String, String> expand = new HashMap<>();
+        expand.put("UID", uniqueId.toString());
+        expand.put("PLATFORM", startInfo.getPlatform());
 
         // run <processPath>/<processName> in <directory>
-        String processName = startInfo.get("process-name");
-        String processPath = startInfo.get("process-path");
-        if (processPath.startsWith("@")) {
-            String resourceId = processPath.substring(1);
-            processPath = startInfo.recreateResourceDirectory(resourceId);
+        String processName = processInfo.childAsString("name");
+        String processPath = processInfo.childAsString("path", false);
+        if (processPath != null) processPath = startInfo.expand(processPath, expand);
+        String directory = processInfo.childAsString("work-directory", false);
+        if (directory != null) directory = startInfo.expand(directory, expand);
+        else directory = processPath == null ? System.getProperty("user.dir") : processPath;
+
+        InfoList argsInfo = processInfo.childAsList("args", false);
+        int argsSize = 1 + (argsInfo == null ? 0 : argsInfo.size());
+        String[] command = new String[argsSize];
+
+        //logger.info("DEBUG: " + (argsInfo == null ? "args not found" : "found args"));
+        //logger.info("DEBUG: command.length = " + command.length);
+
+        command[0] = (processPath  == null ? "" : processPath + File.separator) + processName;
+        //logger.info("DEBUG: command[0] = " + command[0]);
+
+        if (argsInfo != null) {
+            for (int i = 0; i < argsInfo.size(); i++) {
+                String arg = argsInfo.itemAsString(i);
+                command[i + 1] = startInfo.expand(arg, expand);
+                //logger.info("DEBUG: args[" + i +"]='" + arg + "' -> command[" + (i+1) + "]=" + command[i+1]);
+            }
         }
-        String directory = startInfo.get("directory", processPath);
 
         // start the process
-        logger.info("Start process " + processPath + File.separator + processName);
+        logger.info("Start process " + String.join(" ", command));
         UserCodeProcess process = new UserCodeProcess(name, logging)
                 .directory(directory)
-                .command(processPath + File.separator + processName, uniqueId.toString())
+                .command(command)
                 .start();
 
         // create the transport
@@ -60,8 +79,9 @@ public final class UserCodeProcessService extends UserCodeServiceBase {
 
         // create the runtime (which declares itself as a receiver of the transport)
         UserCodeProcessRuntime runtime = new UserCodeProcessRuntime(this, transport, serializationService, process);
-        transport.open(); // FIXME could this be async? should this be runtime.connect()? runtime.connectTransport()?
-        return CompletableFuture.completedFuture(runtime);
+
+        // initialize it all
+        return initialize(runtime);
     }
 
     @Override
@@ -71,8 +91,13 @@ public final class UserCodeProcessService extends UserCodeServiceBase {
             throw new UnsupportedOperationException("runtime is not UserCodeProcessRuntime");
         }
 
+        logger.info("destroy runtime");
+
         UserCodeProcessRuntime processRuntime = (UserCodeProcessRuntime) runtime;
-        processRuntime.destroy();
-        return CompletableFuture.completedFuture(null);
+        return terminate(processRuntime)
+                .thenCompose(x -> {
+                    processRuntime.destroy();
+                    return CompletableFuture.completedFuture(null);
+                });
     }
 }

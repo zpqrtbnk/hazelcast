@@ -8,15 +8,15 @@ import com.hazelcast.usercode.UserCodeTransport;
 
 public class UserCodeContainerRuntime extends UserCodeRuntimeBase {
 
-    private final String containerId;
+    private final String containerName;
 
-    public UserCodeContainerRuntime(UserCodeService userCodeService, UserCodeTransport transport, SerializationService serializationService, String containerId) {
+    public UserCodeContainerRuntime(UserCodeService userCodeService, UserCodeTransport transport, SerializationService serializationService, String containerName) {
 
         super(userCodeService, transport, serializationService);
-        this.containerId = containerId;
+        this.containerName = containerName;
     }
 
-    public String getContainerId() {
-        return containerId;
+    public String getContainerName() {
+        return containerName;
     }
 }

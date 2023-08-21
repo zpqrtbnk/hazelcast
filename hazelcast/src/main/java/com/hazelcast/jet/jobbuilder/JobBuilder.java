@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.jobbuilder;
 
-import com.hazelcast.internal.yaml.*;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceType;
 import com.hazelcast.jet.pipeline.*;
@@ -30,9 +29,9 @@ import java.util.ServiceLoader;
 // builds jobs
 public final class JobBuilder {
 
-    private static final Map<String, Function4<Pipeline, String, YamlMapping, ILogger, Object>> sources = new HashMap<>();
-    private static final Map<String, Consumer4<Object, String, YamlMapping, ILogger>> sinks = new HashMap<>();
-    private static final Map<String, Function4<Object, String, YamlMapping, ILogger, Object>> transforms = new HashMap<>();
+    private static final Map<String, Function4<Pipeline, String, InfoMap, ILogger, Object>> sources = new HashMap<>();
+    private static final Map<String, Consumer4<Object, String, InfoMap, ILogger>> sinks = new HashMap<>();
+    private static final Map<String, Function4<Object, String, InfoMap, ILogger, Object>> transforms = new HashMap<>();
 
     private final Object mutex = new Object();
     private final ILogger logger;
@@ -98,62 +97,57 @@ public final class JobBuilder {
         return jobConfig;
     }
 
-    // parses Yaml content and creates the job pipeline and configuration
-    public void parse(YamlNode root) throws JobBuilderException {
+    // parses a job definition and creates the job pipeline and configuration
+    public void parse(InfoMap definition) throws JobBuilderException {
 
-        if (!(root instanceof YamlMapping)) throw new JobBuilderException("panic");
-
-        YamlMapping jobMapping = ((YamlMapping) root).childAsMapping("job");
-        if (jobMapping == null) throw new JobBuilderException("panic: missing job declaration");
-        enterJobContext(jobMapping);
+        InfoMap jobDefinition = definition.childAsMap("job");
+        //YamlMapping jobMapping = ((YamlMapping) root).childAsMapping("job");
+        //if (jobMapping == null) throw new JobBuilderException("panic: missing job declaration");
+        enterJobContext(jobDefinition);
 
         // job/pipeline is a sequence
-        YamlSequence pipeline = jobMapping.childAsSequence("pipeline");
-        if (pipeline == null) throw new JobBuilderException("panic: missing job/pipeline declaration");
+        InfoList pipelineDefinition = jobDefinition.childAsList("pipeline");
+        //YamlSequence pipeline = jobMapping.childAsSequence("pipeline");
+        //if (pipeline == null) throw new JobBuilderException("panic: missing job/pipeline declaration");
 
-        for (YamlNode pipelineChild : pipeline.children()) {
-
-            // job/pipeline/* are unnamed mappings
-            // job/pipeline/*[0] is sequence
-            YamlMapping pipelineChildMapping = (YamlMapping) pipelineChild;
-            YamlSequence pipelineChildSequence = null;
-            for (YamlNode n : pipelineChildMapping.children()) {
-                if (n instanceof YamlSequence) {
-                    pipelineChildSequence = (YamlSequence) n;
-                    break;
-                }
-            }
+        for (int i = 0; i < pipelineDefinition.size(); i++) {
+            InfoMap fragmentDefinition = pipelineDefinition.itemAsMap(i);
+            String fragmentName = fragmentDefinition.uniqueChildName();
 
             // sequence can be either
             // - pipeline: # enter the pipeline context
             // - whatever: # enter the 'whatever' stage context
 
-            if (pipelineChildSequence.nodeName().equals("pipeline")) {
+            if (fragmentName.equals("pipeline")) {
                 enterPipelineContext();
             } else {
-                enterStageContext(pipelineChildSequence.nodeName());
+                enterStageContext(fragmentName);
             }
 
-            // sequence/* are unnamed mappings
-            // sequence/*[...] are stage properties
+            InfoList stageDefinitions = fragmentDefinition.childAsList(fragmentName);
+            for (int j = 0; j < stageDefinitions.size(); j++)
+            {
+                InfoMap stageDefinition = stageDefinitions.itemAsMap(j);
 
-            for (YamlNode n : pipelineChildSequence.children()) {
+                String sourceName = stageDefinition.childAsString("source", false);
+                String sinkName = stageDefinition.childAsString("sink", false);
+                String transformName = stageDefinition.childAsString("transform", false);
 
-                YamlMapping stageMapping = (YamlMapping) n;
-                YamlScalar stageTypeScalar;
-                if ((stageTypeScalar = stageMapping.childAsScalar("source")) != null) {
-                    addSource(stageTypeScalar.nodeValue(), stageMapping);
-                    if (stageMapping.childAsScalar("stage-id") != null) {
-                        stages.put(stageMapping.childAsScalarValue("stage-id"), stageContext);
+                if (sourceName != null) {
+                    addSource(sourceName, stageDefinition);
+                    String stageId = stageDefinition.childAsString("stage-id", false);
+                    if (stageId != null) {
+                        stages.put(stageId, stageContext);
                     }
                 }
-                else if ((stageTypeScalar = stageMapping.childAsScalar("sink")) != null) {
-                    addSink(stageTypeScalar.nodeValue(), stageMapping);
+                else if (sinkName != null) {
+                    addSink(sinkName, stageDefinition);
                 }
-                else if ((stageTypeScalar = stageMapping.childAsScalar("transform")) != null) {
-                    addTransform(stageTypeScalar.nodeValue(), stageMapping);
-                    if (stageMapping.childAsScalar("stage-id") != null) {
-                        stages.put(stageMapping.childAsScalarValue("stage-id"), stageContext);
+                else if (transformName != null) {
+                    addTransform(transformName, stageDefinition);
+                    String stageId = stageDefinition.childAsString("stage-id", false);
+                    if (stageId != null) {
+                        stages.put(stageId, stageContext);
                     }
                 }
                 else {
@@ -163,26 +157,23 @@ public final class JobBuilder {
         }
     }
 
-    private void enterJobContext(YamlMapping properties) throws JobBuilderException {
+    private void enterJobContext(InfoMap jobDefinition) throws JobBuilderException {
         logger.fine("enter job context");
         // TODO: job properties
         jobConfig = new JobConfig();
-        YamlScalar name = properties.childAsScalar("name");
+        String name = jobDefinition.childAsString("name", false);
         if (name != null) {
-            logger.fine("  name: " + name.nodeValue());
-            jobConfig.setName(name.nodeValue());
+            logger.fine("  name: " + name);
+            jobConfig.setName(name);
         }
 
         // job/resources is a sequence
-        YamlSequence resources = properties.childAsSequence("resources");
+        InfoList resources = jobDefinition.childAsList("resources", false);
         if (resources != null) {
-            for (YamlNode n : resources.children()) {
-                if (!(n instanceof YamlMapping)) {
-                    throw new JobBuilderException("panic: resource");
-                }
-                YamlMapping resource = (YamlMapping) n;
-                String id = YamlUtils.getProperty(resource, "id");
-                ResourceType resourceType = ResourceType.valueOf(YamlUtils.getProperty(resource, "type"));
+            for (int i = 0; i < resources.size(); i++) {
+                InfoMap n = resources.itemAsMap(i);
+                String id = n.childAsString("id");
+                ResourceType resourceType = ResourceType.valueOf(n.childAsString("type"));
 
                 logger.fine("  resource: " + resourceType + " " + id);
                 //Map<String, ResourceConfig> jobResources = jobConfig.getResourceConfigs();
@@ -227,41 +218,41 @@ public final class JobBuilder {
     // StreamSourceStage i
     //   StreamSourceStageImpl
 
-    private void addSource(String name, YamlMapping properties) throws JobBuilderException {
+    private void addSource(String name, InfoMap definition) throws JobBuilderException {
         logger.fine("add source: " + name);
         if (pipelineContext == null || stageContext != null) {
             throw new JobBuilderException("panic: invalid context");
         }
-        Function4<Pipeline, String, YamlMapping, ILogger, Object> f = sources.get(name);
+        Function4<Pipeline, String, InfoMap, ILogger, Object> f = sources.get(name);
         if (f == null) {
             throw new JobBuilderException("panic: unknown source '" + name + "'");
         }
-        stageContext = f.apply(pipelineContext, name, properties, logger);
+        stageContext = f.apply(pipelineContext, name, definition, logger);
         pipelineContext = null;
     }
 
-    private void addSink(String name, YamlMapping properties) throws JobBuilderException {
+    private void addSink(String name, InfoMap definition) throws JobBuilderException {
         logger.fine("add sink: " + name);
         if (pipelineContext != null || stageContext == null) {
             throw new JobBuilderException("panic: invalid context");
         }
-        Consumer4<Object, String, YamlMapping, ILogger> f = sinks.get(name);
+        Consumer4<Object, String, InfoMap, ILogger> f = sinks.get(name);
         if (f == null) {
             throw new JobBuilderException("panic: unknown sink '" + name + "'");
         }
-        f.accept(stageContext, name, properties, logger);
+        f.accept(stageContext, name, definition, logger);
         stageContext = null;
     }
 
-    private void addTransform(String name, YamlMapping properties) throws JobBuilderException {
+    private void addTransform(String name, InfoMap definition) throws JobBuilderException {
         logger.fine("add transform: " + name);
         if (pipelineContext != null || stageContext == null) {
             throw new JobBuilderException("panic: invalid context");
         }
-        Function4<Object, String, YamlMapping, ILogger, Object> f = transforms.get(name);
+        Function4<Object, String, InfoMap, ILogger, Object> f = transforms.get(name);
         if (f == null) {
             throw new JobBuilderException("panic: unknown transform '" + name + "'");
         }
-        stageContext = f.apply(stageContext, name, properties, logger);
+        stageContext = f.apply(stageContext, name, definition, logger);
     }
 }

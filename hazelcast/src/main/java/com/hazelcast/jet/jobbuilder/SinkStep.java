@@ -1,14 +1,13 @@
 package com.hazelcast.jet.jobbuilder;
 
-import com.hazelcast.internal.yaml.YamlMapping;
 import com.hazelcast.logging.ILogger;
 
 public class SinkStep {
 
     private final String name;
-    private final Consumer4<Object, String, YamlMapping, ILogger> function;
+    private final Consumer4<Object, String, InfoMap, ILogger> function;
 
-    public SinkStep(String name, Consumer4<Object, String, YamlMapping, ILogger> function) {
+    public SinkStep(String name, Consumer4<Object, String, InfoMap, ILogger> function) {
         this.name = name;
         this.function = function;
     }
@@ -17,7 +16,7 @@ public class SinkStep {
         return name;
     }
 
-    public Consumer4<Object, String, YamlMapping, ILogger> getFunction() {
+    public Consumer4<Object, String, InfoMap, ILogger> getFunction() {
         return function;
     }
 }

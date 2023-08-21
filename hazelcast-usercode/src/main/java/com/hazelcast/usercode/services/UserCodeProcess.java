@@ -173,12 +173,13 @@ public class UserCodeProcess {
 
         Thread thread = new Thread(() -> {
 
+            logger.fine("Piping process " + name + " (" + process.pid() + ") stdout");
             try (BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream(), UTF_8))) {
                 for (String line; (line = in.readLine()) != null; ) {
                     logger.fine(line);
                 }
             } catch (IOException e) {
-                logger.severe("Exception while logging process " + name + "-" + process.pid() + " stdout.", e);
+                logger.severe("Exception while logging process " + name + " (" + process.pid() + ")  stdout.", e);
             }
         }, name + "-" + process.pid());
 

@@ -30,8 +30,12 @@ public final class UserCodeMessage {
     }
 
     // determines whether a message is an exception message
-    public boolean isException() {
-        return functionName.equals(".EXCEPTION"); // TODO: name for special functions? prefix with dot?
+    public boolean isError() {
+        return functionName.equals(".ERROR");
+    }
+
+    public String getErrorMessage() {
+        return payload == null ? "" : " " + new String(payload, StandardCharsets.UTF_8);
     }
 
     // determines the number of bytes required to carry the message

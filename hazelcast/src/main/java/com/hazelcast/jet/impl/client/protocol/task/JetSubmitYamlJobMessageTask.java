@@ -72,7 +72,7 @@ public class JetSubmitYamlJobMessageTask extends AbstractJetMessageTask<JetSubmi
         ILogger logger = nodeEngine.getLogger(JobBuilder.class);
 
         JobBuilder jobBuilder = new JobBuilder(logger);
-        jobBuilder.parse(parameters.jobYaml);
+        jobBuilder.parse(parameters.jobDefinition);
 
         boolean isLightJob = parameters.lightJobCoordinator != null;
 

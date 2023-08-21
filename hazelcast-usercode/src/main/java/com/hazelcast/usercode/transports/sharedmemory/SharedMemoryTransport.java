@@ -1,16 +1,14 @@
 package com.hazelcast.usercode.transports.sharedmemory;
 
+import com.hazelcast.jet.jobbuilder.InfoMap;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.usercode.UserCodeException;
 import com.hazelcast.usercode.UserCodeMessage;
-import com.hazelcast.usercode.UserCodeTransport;
 import com.hazelcast.usercode.transports.MultiplexTransportBase;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -26,9 +24,9 @@ public final class SharedMemoryTransport extends MultiplexTransportBase implemen
     private final ILogger logger;
     private SharedMemoryPipe pipe;
 
-    public SharedMemoryTransport(UUID uniqueId, LoggingService logging) {
+    public SharedMemoryTransport(InfoMap transportInfo, LoggingService logging) {
 
-        this.uniqueId = uniqueId;
+        this.uniqueId = transportInfo.childAsUUID("uid");
         this.logger = logging.getLogger(SharedMemoryTransport.class);
     }
 
@@ -50,6 +48,7 @@ public final class SharedMemoryTransport extends MultiplexTransportBase implemen
     @Override
     public CompletableFuture<UserCodeMessage> invoke(UserCodeMessage message) {
 
+        logger.info("SEND " + message.getId() + " " + message.getFunctionName());
         pipe.write(message);
         return createFuture(message);
     }
@@ -57,6 +56,7 @@ public final class SharedMemoryTransport extends MultiplexTransportBase implemen
     @Override
     public void receive(UserCodeMessage message) {
 
+        logger.info("RECV " + message.getId() + " " + message.getFunctionName());
         completeFuture(message);
     }
 

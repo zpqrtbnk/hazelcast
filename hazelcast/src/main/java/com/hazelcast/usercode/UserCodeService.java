@@ -18,7 +18,7 @@ public interface UserCodeService {
     // name: the unique name of the runtime
     // startInfo: arguments for the runtime creation
     // returns: the runtime
-    Future<UserCodeRuntime> startRuntime(String name, UserCodeRuntimeStartInfo startInfo) throws UserCodeException;
+    Future<UserCodeRuntime> startRuntime(String name, UserCodeRuntimeInfo startInfo) throws UserCodeException;
 
     // destroys a runtime
     // runtime: the runtime

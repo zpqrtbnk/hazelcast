@@ -1,6 +1,7 @@
 package com.hazelcast.usercode.transports.grpc;
 
 import com.google.protobuf.ByteString;
+import com.hazelcast.jet.jobbuilder.InfoMap;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.usercode.UserCodeException;
@@ -28,7 +29,10 @@ public final class GrpcTransport extends MultiplexTransportBase {
     private CountDownLatch completionLatch = new CountDownLatch(1);
     private volatile Throwable exceptionInOutputObserver; // TODO: take care of it, of server's health (see python)
 
-    public GrpcTransport(String address, int port, LoggingService logging) {
+    public GrpcTransport(InfoMap transportInfo, LoggingService logging) {
+
+        String address = transportInfo.childAsString("address", "localhost");
+        int port = transportInfo.childAsInteger("port", 80);
 
         this.address = address;
         this.port = port;

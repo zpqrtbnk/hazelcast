@@ -1,7 +1,6 @@
 package com.hazelcast.jet.jobbuilder;
 
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.internal.yaml.YamlMapping;
 import com.hazelcast.jet.pipeline.*;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.usercode.compile.InMemoryFileManager;
@@ -38,11 +37,11 @@ public class BuiltinStepProvider implements StepProvider {
         };
     }
 
-    private static Object sourceMapJournal(Pipeline pipelineContext, String name, YamlMapping properties, ILogger logger) throws JobBuilderException {
+    private static Object sourceMapJournal(Pipeline pipelineContext, String name, InfoMap definition, ILogger logger) throws JobBuilderException {
 
-        String mapName = YamlUtils.getProperty(properties, "map-name");
-        String initialPositionString = YamlUtils.getProperty(properties, "journal-initial-position");
-        //JournalInitialPosition initialPosition = getProperty(properties, "journal-initial-position");
+        String mapName = definition.childAsString("map-name");
+        String initialPositionString = definition.childAsString("journal-initial-position");
+        //JournalInitialPosition initialPosition = getProperty(definition, "journal-initial-position");
         JournalInitialPosition initialPosition = JournalInitialPosition.valueOf(initialPositionString);
         logger.fine("  map-name: " + mapName);
         logger.fine("  initial-position: " + initialPosition);
@@ -53,20 +52,20 @@ public class BuiltinStepProvider implements StepProvider {
         StreamSourceStage sourceStage = pipelineContext.readFrom(streamSource);
         StreamStage stage;
 
-        String timestamps = YamlUtils.getProperty(properties, "timestamps", "NONE");
+        String timestamps = definition.childAsString("timestamps", "NONE");
         switch (timestamps.toUpperCase()) {
             case "NONE":
                 stage = sourceStage.withoutTimestamps();
                 break;
             case "NATIVE":
-                long nativeAllowedLag = YamlUtils.<Long>getProperty(properties, "timestamps-allowed-lag");
+                long nativeAllowedLag = definition.childAsLong("timestamps-allowed-lag");
                 stage = sourceStage.withNativeTimestamps(nativeAllowedLag);
                 break;
             case "INGESTION":
                 stage = sourceStage.withIngestionTimestamps();
                 break;
             default:
-                long lambdaAllowedLag = YamlUtils.<Long>getProperty(properties, "timestamps-allowed-lag");
+                long lambdaAllowedLag = definition.childAsLong("timestamps-allowed-lag");
                 // TODO: we *should* handle the lambda somehow?
                 throw new JobBuilderException("panic: lambda not supported");
         }
@@ -74,15 +73,15 @@ public class BuiltinStepProvider implements StepProvider {
         return stage;
     }
 
-    private static Object identity(Object stageContext, String name, YamlMapping properties, ILogger logger) {
+    private static Object identity(Object stageContext, String name, InfoMap properties, ILogger logger) {
 
         return stageContext;
     }
 
     // highly experimental and won't work on viridian of course
-    private static Object lambda(Object stageContext, String name, YamlMapping properties, ILogger logger) throws JobBuilderException {
+    private static Object lambda(Object stageContext, String name, InfoMap definition, ILogger logger) throws JobBuilderException {
 
-        String expression = YamlUtils.getProperty(properties, "expr");
+        String expression = definition.childAsString("expr");
         String classId = UUID.randomUUID().toString().replace("-", "");
         String className = "Lambda_" + classId;
         String qualifiedClassName = "com.hazelcast.jet.lambdas." + className;
@@ -131,9 +130,9 @@ public class BuiltinStepProvider implements StepProvider {
         return ((GeneralStage) stageContext).map(mapFn);
     }
 
-    private static void sinkMap(Object stageContext, String name, YamlMapping properties, ILogger logger) throws JobBuilderException {
+    private static void sinkMap(Object stageContext, String name, InfoMap definition, ILogger logger) throws JobBuilderException {
 
-        String mapName = YamlUtils.getProperty(properties, "map-name");
+        String mapName = definition.childAsString("map-name");
         logger.fine("  map-name: " + mapName);
         if (stageContext instanceof GeneralStage) {
             // FIXME how can we check?

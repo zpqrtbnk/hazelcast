@@ -2,12 +2,9 @@ package com.hazelcast.usercode;
 
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.SerializationService;
-import com.hazelcast.internal.serialization.SerializationServiceAware;
 import com.hazelcast.internal.serialization.impl.HeapData;
 
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -31,8 +28,11 @@ public abstract class UserCodeRuntimeBase implements UserCodeRuntime {
 
     @Override
     public UserCodeService getUserCodeService() {
-
         return userCodeService;
+    }
+
+    public UserCodeTransport getTransport() {
+        return transport;
     }
 
     @Override
@@ -53,10 +53,8 @@ public abstract class UserCodeRuntimeBase implements UserCodeRuntime {
         UserCodeMessage message = new UserCodeMessage(id, functionName, payload);
 
         return transport.invoke(message).thenApply(m -> {
-            if (m.isException()) {
-                byte[] exceptionMessageBytes = m.getPayload();
-                String exceptionMessage = "Runtime exception." + (exceptionMessageBytes == null ? "" : " " + new String(exceptionMessageBytes, StandardCharsets.UTF_8));
-                throw new UserCodeException(exceptionMessage);
+            if (m.isError()) {
+                throw new UserCodeException("Runtime exception: " + m.getErrorMessage());
             } else {
                 return m.getPayload();
             }

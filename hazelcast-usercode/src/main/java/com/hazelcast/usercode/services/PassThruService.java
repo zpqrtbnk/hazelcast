@@ -1,7 +1,6 @@
 package com.hazelcast.usercode.services;
 
-import com.hazelcast.internal.serialization.SerializationService;
-import com.hazelcast.internal.serialization.SerializationServiceAware;
+import com.hazelcast.jet.jobbuilder.InfoMap;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.usercode.*;
@@ -21,9 +20,10 @@ public class PassThruService extends UserCodeServiceBase {
     }
 
     @Override
-    public Future<UserCodeRuntime> startRuntime(String name, UserCodeRuntimeStartInfo startInfo) throws UserCodeException {
+    public Future<UserCodeRuntime> startRuntime(String name, UserCodeRuntimeInfo startInfo) throws UserCodeException {
 
-        ensureMode("passthru", startInfo);
+        InfoMap passthruInfo = startInfo.childAsMap("passthru");
+
         UserCodeTransport transport = createTransport(startInfo);
         UserCodeRuntime runtime = new PassThruRuntime(this, transport, serializationService);
         return CompletableFuture.completedFuture(runtime);

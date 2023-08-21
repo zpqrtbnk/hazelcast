@@ -3,9 +3,11 @@ package com.hazelcast.client.impl.protocol.codec;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.builtin.StringCodec;
 import com.hazelcast.internal.yaml.YamlLoader;
-import com.hazelcast.internal.yaml.YamlNode;
+import com.hazelcast.jet.jobbuilder.InfoMap;
 
 import javax.annotation.Nullable;
+
+import java.util.Map;
 
 import static com.hazelcast.client.impl.protocol.ClientMessage.*;
 import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.*;
@@ -26,7 +28,7 @@ public final class JetSubmitYamlJobCodec {
 
         public long jobId;
         public boolean dryRun;
-        public YamlNode jobYaml;
+        public InfoMap jobDefinition;
 
         public @Nullable java.util.UUID lightJobCoordinator;
 
@@ -61,7 +63,7 @@ public final class JetSubmitYamlJobCodec {
         ClientMessage.Frame initialFrame = iterator.next();
         request.jobId = decodeLong(initialFrame.content, REQUEST_JOB_ID_FIELD_OFFSET);
         String yamlString = StringCodec.decode(iterator);
-        request.jobYaml = YamlLoader.load(yamlString);
+        request.jobDefinition = new InfoMap((Map<String, Object>) YamlLoader.loadRaw(yamlString));
 //        if (initialFrame.content.length >= REQUEST_LIGHT_JOB_COORDINATOR_FIELD_OFFSET + UUID_SIZE_IN_BYTES) {
 //            request.lightJobCoordinator = decodeUUID(initialFrame.content, REQUEST_LIGHT_JOB_COORDINATOR_FIELD_OFFSET);
 //            request.isLightJobCoordinatorExists = true;

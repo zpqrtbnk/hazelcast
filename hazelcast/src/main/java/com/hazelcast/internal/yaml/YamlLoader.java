@@ -142,6 +142,14 @@ public final class YamlLoader {
         }
     }
 
+    public static Object loadRaw(String yaml) {
+        try {
+            return getLoad().loadFromString(yaml);
+        } catch (Exception ex) {
+            throw new YamlException("An error occurred while loading and parsing the YAML string", ex);
+        }
+    }
+
     private static Load getLoad() {
         LoadSettings settings = LoadSettings.builder().build();
         return new Load(settings);

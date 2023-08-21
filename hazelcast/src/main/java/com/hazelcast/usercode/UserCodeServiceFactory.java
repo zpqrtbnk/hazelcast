@@ -15,10 +15,8 @@ public final class UserCodeServiceFactory {
 
     public static UserCodeService getService(String mode, LoggingService logging) {
 
-        // TODO: do better
-        // things should be in the same module, or properly injected, or whatever
-        // and it's totally not thread safe
-        // this is POC
+        // TODO: do better, we're talking singletons here
+        // and... we should multi-thread better and a cluster should support 1 unique service?
 
         UserCodeService service = services.get(mode);
         if (service != null) {
@@ -31,6 +29,7 @@ public final class UserCodeServiceFactory {
                 className = "com.hazelcast.usercode.services.UserCodeProcessService";
                 break;
             case "container":
+                // FIXME this is going to fail because we need to inject a controller in it?!
                 className = "com.hazelcast.usercode.services.UserCodeContainerService";
                 break;
             case "passthru":

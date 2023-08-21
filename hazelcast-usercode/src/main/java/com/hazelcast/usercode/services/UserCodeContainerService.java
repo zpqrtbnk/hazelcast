@@ -1,12 +1,10 @@
 package com.hazelcast.usercode.services;
 
-import com.hazelcast.internal.serialization.SerializationService;
-import com.hazelcast.internal.serialization.SerializationServiceAware;
+import com.hazelcast.jet.jobbuilder.InfoMap;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.usercode.*;
 import com.hazelcast.usercode.runtimes.UserCodeContainerRuntime;
-import com.hazelcast.usercode.transports.grpc.GrpcTransport;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -18,36 +16,52 @@ public final class UserCodeContainerService extends UserCodeServiceBase {
     // TODO: implement logging when container starts and stops etc
 
     private final ILogger logger;
+    private final UserCodeRuntimeController controller;
 
-    public UserCodeContainerService(LoggingService logging) {
+    public UserCodeContainerService(UserCodeRuntimeController controller, LoggingService logging) {
         super(logging);
+        this.controller = controller;
         this.logger = logging.getLogger(UserCodeContainerService.class);
     }
 
     @Override
-    public CompletableFuture<UserCodeRuntime> startRuntime(String name, UserCodeRuntimeStartInfo startInfo) throws UserCodeException {
+    public CompletableFuture<UserCodeRuntime> startRuntime(String name, UserCodeRuntimeInfo startInfo) throws UserCodeException {
 
-        ensureMode("container", startInfo);
+        InfoMap containerInfo = startInfo.childAsMap("container");
 
         // allocate the runtime unique identifier
         UUID uniqueId = UUID.randomUUID();
-        startInfo.set("uid", uniqueId);
+        startInfo.setChild("uid", uniqueId);
 
-        String image = startInfo.get("container-image");
-        String containerId = ""; // FIXME maybe we get it from startRuntime?
-        String address = "";
-        int port = 80;
+        // assuming we have a controller (initialized with address:port or anything, how?)
+        // we start the container from an image and receive back its address which uniquely identifies it
+        // and, for now, assume that the container has a gRPC service listening on a pre-agreed port
+        // should we want to do shared memory... we'd have to pass more infos to createContainer
+        String image = containerInfo.childAsString("image");
 
-        return startRuntime().thenApply(x -> {
-            UserCodeTransport transport = new GrpcTransport(address, port, null); // FIXME args?
-            UserCodeRuntime runtime = new UserCodeContainerRuntime(this, transport, serializationService, containerId);
-            return runtime;
-        });
-    }
+        return controller
+                .createContainer(image)
+                .thenApply(containerAddress -> {
 
-    private CompletableFuture<Void> startRuntime() {
-        // TODO: use the rest API to start the container
-        throw new UnsupportedOperationException();
+                    if (startInfo.childIsMap("transport")) {
+                        InfoMap transportInfo = startInfo.childAsMap("transport");
+                        transportInfo.setChild("address", containerAddress);
+                        transportInfo.setChild("port", 5252); // FIXME or whatever the default gRPC port is
+                    }
+                    else {
+                        if (startInfo.childIsString("transport") && !startInfo.childAsString("transport").equals("grpc")) {
+                            throw new UserCodeException("Invalid transport, must be 'grpc'.");
+                        }
+                        InfoMap transportInfo = new InfoMap();
+                        transportInfo.setChild("address", containerAddress);
+                        transportInfo.setChild("port", 5252); // FIXME or whatever the default gRPC port is
+                        startInfo.setChild("transport", transportInfo);
+                    }
+                    UserCodeTransport transport = createTransport(startInfo);
+
+                    return new UserCodeContainerRuntime(this, transport, serializationService, containerAddress);
+                })
+                .thenCompose(this::initialize);
     }
 
     @Override
@@ -57,13 +71,9 @@ public final class UserCodeContainerService extends UserCodeServiceBase {
             throw new UnsupportedOperationException("runtime is not UserCodeContainerRuntime");
         }
         UserCodeContainerRuntime containerRuntime = (UserCodeContainerRuntime) runtime;
-        return stopRuntime(containerRuntime.getContainerId());
-    }
-
-    private CompletableFuture<Void> stopRuntime(String uniqueName) {
-
-        // TODO: use the rest API to destroy the container
-        throw new UnsupportedOperationException();
+        String containerAddress = containerRuntime.getContainerName();
+        return terminate(containerRuntime)
+                .thenCompose(x -> controller.deleteContainer(containerAddress));
     }
 }
 

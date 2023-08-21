@@ -1,6 +1,5 @@
 package com.hazelcast.jet.python;
 
-import com.hazelcast.internal.yaml.YamlMapping;
 import com.hazelcast.jet.jobbuilder.*;
 import com.hazelcast.logging.ILogger;
 
@@ -49,7 +48,7 @@ public class PythonStepProvider implements StepProvider {
     //   python-exe: name of the python exe (python, python3...)
     //   preserve-order: true|false
     //   etc...
-    private static Object transformPython(Object stageContext, String name, YamlMapping properties, ILogger logger) throws JobBuilderException {
+    private static Object transformPython(Object stageContext, String name, InfoMap properties, ILogger logger) throws JobBuilderException {
 
         // not implemented for now
         return stageContext;
