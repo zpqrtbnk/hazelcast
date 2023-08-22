@@ -47,7 +47,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
-//import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.function.Function;
@@ -100,11 +100,10 @@ public class UserCodeRuntimeTests extends SimpleTestInClusterSupport {
     }
 
     @After
-    public void after() {
-        server.shutdownNow();
-
+    public void after() throws InterruptedException {
+        server.shutdownNow().awaitTermination();
         if (runtimeRemoteServer != null) {
-            runtimeRemoteServer.shutdownNow();
+            runtimeRemoteServer.shutdownNow().awaitTermination();
         }
     }
 
@@ -170,9 +169,8 @@ public class UserCodeRuntimeTests extends SimpleTestInClusterSupport {
         Assert.assertNotNull(f.get());
     }
 
-    /*@Test
-    TODO: Implement observer to handle exceptions.
-    public void userCodeRuntimeService_destroys_when_controller_down_test()
+    @Test(timeout = 15_000)
+    public void userCodeRuntimeService_retry_destroys_when_controller_restart_test()
             throws InterruptedException,
             ExecutionException,
             IOException {
@@ -182,38 +180,52 @@ public class UserCodeRuntimeTests extends SimpleTestInClusterSupport {
         RuntimeConfig runtimeConfig = new RuntimeConfig();
         runtimeConfig.setImageName("user/image");
 
-        CountDownLatch latch = new CountDownLatch(1);
+        final CountDownLatch latchStartServer = new CountDownLatch(1);
+        final CountDownLatch latchAsserted = new CountDownLatch(1);
 
+        //Define destroy function on the server.
         mockControllerService.setDestroyFn((req) -> {
             Assert.assertEquals(name, req.getName());
             Empty response = Empty.newBuilder().build();
-
-            try {
-                latch.await();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
             return response;
         });
 
-        Future f = UserCodeRuntimeService.getInstance().destroyRuntimeAsync(name);
+        // Initialize the service and let it connect to grpc server.
+        UserCodeRuntimeService.getInstance();
 
-        // stop the server
-        server.shutdownNow();
+        server.shutdownNow().awaitTermination();
 
-        while (!server.isTerminated()) {
-        }
+        Runnable restartServer = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    CreateGrpcServer();
+                    server.start();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
 
-        Thread.sleep(100);
-        CreateGrpcServer();
-        latch.countDown();
-
-        while (!f.isDone()) {
-        }
-
-        Assert.assertNotNull(f.get());
-    }*/
+        Runnable destroyRuntime = new Runnable() {
+            @Override
+            public void run() {
+                // It will wait for a while until connection reestablished.
+                // We cannot re-try at the background because we don't have a thread to watch out the invocation.
+                Future f = UserCodeRuntimeService.getInstance().destroyRuntimeAsync(name);
+                try {
+                    Assert.assertNotNull(f.get());
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
+                } finally {
+                    latchAsserted.countDown();
+                }
+            }
+        };
+        destroyRuntime.run();
+        restartServer.run();
+        latchAsserted.await();
+    }
 
     @Test
     public void userCodeRuntime_does_invoke_test() throws IOException, ExecutionException, InterruptedException {
@@ -247,7 +259,9 @@ public class UserCodeRuntimeTests extends SimpleTestInClusterSupport {
                 .setPort(RUNTIME_PORT);
 
         // Runtime is started
-        UserCodeRuntime runtime = UserCodeRuntimeService.getInstance().startRuntime(mockContext, runtimeConfig);
+        UserCodeRuntime runtime = UserCodeRuntimeService
+                .getInstance()
+                .startRuntime(mockContext, runtimeConfig);
 
         Queue<CompletableFuture<Data>> futures = new ArrayDeque<>();
 

@@ -21,6 +21,7 @@
 package com.hazelcast.jet.usercoderuntime.impl;
 
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.usercoderuntime.FailedRuntimeRequestException;
 import com.hazelcast.jet.usercoderuntime.UserCodeRuntime;
 import com.hazelcast.jet.usercoderuntime.RuntimeConfig;
 import com.hazelcast.jet.usercoderuntime.RuntimeServiceConfig;
@@ -36,6 +37,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 public final class UserCodeRuntimeService {
+    private static final int DEADLINE_FOR_INVOCATION = 10;
     private static UserCodeRuntimeService service;
     // Channel to runtime controller.
     private ManagedChannel ctrlChannel;
@@ -54,7 +56,6 @@ public final class UserCodeRuntimeService {
                                 .getInteger(ClusterProperty.USERCODERUNTIME_CONTROLLER_KEEP_ALIVE_TIMEOUT_SECONDS),
                         TimeUnit.SECONDS)
                 .keepAliveWithoutCalls(true)
-                // TODO: Configure retry for idempotent
                 .enableRetry()
                 .usePlaintext()
                 .build();
@@ -92,6 +93,41 @@ public final class UserCodeRuntimeService {
         return service;
     }
 
+    /**
+     * Creates a {@link UserCodeRuntime} instance by using the user code runtime controller within given duration
+     * otherwise throws.
+     *
+     * @since 5.4
+     */
+    public UserCodeRuntime startRuntime(ProcessorSupplier.Context context, RuntimeConfig config, int timeOutSeconds) {
+
+        CreateRequest request = CreateRequest.newBuilder()
+                .setImage(config.getImageName())
+                .build();
+
+        try {
+
+            CreateResponse result;
+
+            if (timeOutSeconds > 0) {
+                result = stubBlocking
+                        .withDeadlineAfter(timeOutSeconds, TimeUnit.SECONDS)
+                        .create(request);
+            } else {
+                result = stubBlocking.create(request);
+            }
+
+            // Add check when other type of transport introduced-> GRPC, Shared Memory
+            UserCodeRuntimeGrpcImpl runtime = new UserCodeRuntimeGrpcImpl(context, result, config);
+            return runtime;
+        } catch (Exception e) {
+            context.hazelcastInstance()
+                    .getLoggingService()
+                    .getLogger("UserCodeRuntimeService")
+                    .severe("Request for starting a new user code runtime failed.", e);
+            throw new FailedRuntimeRequestException("Request for starting a new user code runtime failed.", e);
+        }
+    }
 
     /**
      * Creates a {{@link UserCodeRuntime}} instance by using the user code runtime controller.
@@ -100,15 +136,7 @@ public final class UserCodeRuntimeService {
      */
     public UserCodeRuntime startRuntime(ProcessorSupplier.Context context, RuntimeConfig config) {
 
-        CreateRequest request = CreateRequest.newBuilder()
-                .setImage(config.getImageName())
-                .build();
-
-        CreateResponse result = stubBlocking.create(request);
-        // Add check when other type of transport introduced-> GRPC, Shared Memory
-        UserCodeRuntimeGrpcImpl runtime = new UserCodeRuntimeGrpcImpl(context, result, config);
-
-        return runtime;
+        return startRuntime(context, config, -1);
     }
 
     /**
@@ -120,12 +148,15 @@ public final class UserCodeRuntimeService {
      * @since 5.4
      */
     public Future destroyRuntimeAsync(String name) {
-    // TODO: refactor to stream observer to handle errors.
+
+        // If we observe the output and act according to result then what thread will be responsible to manage or retry
+        // that request since it is an async call.
+
         DeleteRequest request = DeleteRequest
                 .newBuilder()
                 .setName(name)
                 .build();
 
-        return stub.delete(request);
+        return stub.withDeadlineAfter(DEADLINE_FOR_INVOCATION, TimeUnit.SECONDS).withWaitForReady().delete(request);
     }
 }
