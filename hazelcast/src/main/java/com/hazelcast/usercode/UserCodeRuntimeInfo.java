@@ -51,6 +51,7 @@ public final class UserCodeRuntimeInfo extends InfoMap implements Serializable {
         }
         directory = processorContext.recreateAttachedDirectory(resourceId).toString();
         resourceDirectories.put(resourceId, directory);
+        processorContext.logger().info("Restored resource " + resourceId + " at " + directory);
         return directory;
     }
 

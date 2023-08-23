@@ -14,6 +14,7 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 
+import java.net.Socket;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -42,7 +43,25 @@ public final class GrpcTransport extends MultiplexTransportBase {
     @Override
     public CompletableFuture<Void> open() {
 
-        logger.info("Open Grpc transport (" + address + ":" + port + ")");
+        logger.info("Open gRPC transport (" + address + ":" + port + ")");
+
+        int timeout = 30000; // ms
+        int elapsed = 0;
+        while (!serverListening(address, port)) {
+            if (elapsed > timeout) {
+                throw new UserCodeException("Failed to detect listening gRPC server.");
+            }
+            try {
+                TimeUnit.MILLISECONDS.sleep(500);
+                elapsed += 500;
+            }
+            catch (InterruptedException ex) {
+                return null; // FIXME?
+            }
+        }
+
+        logger.info("Detected gRPC server");
+
         ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder
                 .forAddress(address, port)
                 //.intercept(new TimeoutInterceptor(timeoutValue, timeoutUnit))
@@ -58,6 +77,26 @@ public final class GrpcTransport extends MultiplexTransportBase {
         // TODO: consider pinging / validating that we are connected?
         logger.info("Opened Grpc transport (" + address + ":" + port + ")");
         return CompletableFuture.completedFuture(null);
+    }
+
+    public static boolean serverListening(String host, int port)
+    {
+        Socket s = null;
+        try
+        {
+            s = new Socket(host, port);
+            return true;
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
+        finally
+        {
+            if(s != null)
+                try { s.close(); }
+                catch (Exception e) { }
+        }
     }
 
     private class MessageReceiver implements StreamObserver<UserCodeGrpcMessage> {

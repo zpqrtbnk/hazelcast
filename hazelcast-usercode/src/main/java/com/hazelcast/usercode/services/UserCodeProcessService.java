@@ -68,7 +68,7 @@ public final class UserCodeProcessService extends UserCodeServiceBase {
         }
 
         // start the process
-        logger.info("Start process " + String.join(" ", command));
+        logger.info("Start process " + String.join(" ", command) + " in directory " + directory);
         UserCodeProcess process = new UserCodeProcess(name, logging)
                 .directory(directory)
                 .command(command)

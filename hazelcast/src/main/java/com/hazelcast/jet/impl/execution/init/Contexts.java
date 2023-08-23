@@ -347,7 +347,8 @@ public final class Contexts {
         private static String tempDirPrefix(String jetInstanceName, String jobId, String resourceId) {
             return "jet-" + jetInstanceName
                     + "-" + jobId
-                    + "-" + resourceId.substring(0, min(32, resourceId.length())).replaceAll("[^\\w.\\-$]", "_");
+                    + "-" + resourceId.substring(0, min(32, resourceId.length())).replaceAll("[^\\w.\\-$]", "_")
+                    + "-";
         }
 
         @Nonnull @Override
