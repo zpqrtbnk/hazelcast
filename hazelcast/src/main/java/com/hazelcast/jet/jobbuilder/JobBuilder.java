@@ -169,20 +169,24 @@ public final class JobBuilder {
 
         // job/resources is a sequence
         InfoList resources = jobDefinition.childAsList("resources", false);
-        if (resources != null) {
+        if (resources == null) {
+            logger.info("  resources: none");
+        }
+        else {
+            StringBuilder s = new StringBuilder();
+            s.append("  resources:\n");
             for (int i = 0; i < resources.size(); i++) {
                 InfoMap n = resources.itemAsMap(i);
                 String id = n.childAsString("id");
                 ResourceType resourceType = ResourceType.valueOf(n.childAsString("type"));
-
-                logger.fine("  resource: " + resourceType + " " + id);
-                //Map<String, ResourceConfig> jobResources = jobConfig.getResourceConfigs();
-                URL url = null;
+                s.append("    " + resourceType + " " + id);
+                URL url = null; // FIXME why can't we just use the path, or...?
                 try { url = new URL("file:///dev/null"); } catch (Exception e) {
                     throw new JobBuilderException("panic: not an url");
                 }
                 jobConfig.add(url, id, resourceType); // FIXME public ctor
             }
+            logger.info(s.toString());
         }
     }
 
