@@ -18,16 +18,16 @@ public final class UserCodeContainerService extends UserCodeServiceBase {
     private final ILogger logger;
     private final UserCodeRuntimeController controller;
 
-    public UserCodeContainerService(UserCodeRuntimeController controller, LoggingService logging) {
-        super(logging);
-        this.controller = controller;
+    public UserCodeContainerService(String localMember, String address, int port, LoggingService logging) {
+        super(localMember, logging);
+        this.controller = new UserCodeRuntimeController(address, port, logging.getLogger(UserCodeRuntimeController.class));
         this.logger = logging.getLogger(UserCodeContainerService.class);
     }
 
     @Override
     public CompletableFuture<UserCodeRuntime> startRuntime(String name, UserCodeRuntimeInfo startInfo) throws UserCodeException {
 
-        InfoMap containerInfo = startInfo.childAsMap("container");
+        InfoMap containerInfo = startInfo.childAsMap("service").childAsMap("container");
 
         // allocate the runtime unique identifier
         UUID uniqueId = UUID.randomUUID();

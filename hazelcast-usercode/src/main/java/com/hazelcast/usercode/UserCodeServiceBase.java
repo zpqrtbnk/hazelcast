@@ -7,16 +7,19 @@ import com.hazelcast.logging.LoggingService;
 import com.hazelcast.usercode.transports.grpc.GrpcTransport;
 import com.hazelcast.usercode.transports.sharedmemory.SharedMemoryTransport;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
 public abstract class UserCodeServiceBase implements UserCodeService, SerializationServiceAware {
 
+    private final String localMember;
     protected final LoggingService logging;
     protected SerializationService serializationService;
 
-    public UserCodeServiceBase(LoggingService logging) {
+    public UserCodeServiceBase(String localMember, LoggingService logging) {
+        this.localMember = localMember;
 
         this.logging = logging;
     }
@@ -70,8 +73,10 @@ public abstract class UserCodeServiceBase implements UserCodeService, Serializat
 
         runtime.getTransport().open(); // FIXME could this be async?
 
+        byte[] connectArgs = localMember.getBytes(StandardCharsets.US_ASCII);
+
         return runtime.getTransport()
-                .invoke(new UserCodeMessage(0, ".CONNECT", new byte[0]))
+                .invoke(new UserCodeMessage(0, ".CONNECT", connectArgs))
                 .thenApply(response -> {
                     if (response.isError()) {
                         throw new UserCodeException("Exception in .CONNECT: " + response.getErrorMessage());

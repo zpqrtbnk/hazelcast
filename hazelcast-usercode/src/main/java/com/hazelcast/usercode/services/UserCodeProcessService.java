@@ -17,9 +17,9 @@ public final class UserCodeProcessService extends UserCodeServiceBase {
 
     private final ILogger logger;
 
-    public UserCodeProcessService(LoggingService logging) {
+    public UserCodeProcessService(String localMember, LoggingService logging) {
 
-        super(logging);
+        super(localMember, logging);
         this.logger = logging.getLogger(UserCodeProcessService.class);
     }
 
@@ -31,7 +31,7 @@ public final class UserCodeProcessService extends UserCodeServiceBase {
     @Override
     public CompletableFuture<UserCodeRuntime> startRuntime(String name, UserCodeRuntimeInfo startInfo) throws UserCodeException {
 
-        InfoMap processInfo = startInfo.childAsMap("process");
+        InfoMap processInfo = startInfo.childAsMap("service").childAsMap("process");
 
         // allocate the runtime unique identifier
         UUID uniqueId = UUID.randomUUID();
@@ -77,7 +77,7 @@ public final class UserCodeProcessService extends UserCodeServiceBase {
         // create the transport
         UserCodeTransport transport = createTransport(startInfo);
 
-        // create the runtime (which declares itself as a receiver of the transport)
+        // create the runtime
         UserCodeProcessRuntime runtime = new UserCodeProcessRuntime(this, transport, serializationService, process);
 
         // initialize it all

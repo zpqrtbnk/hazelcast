@@ -5,7 +5,7 @@ import com.hazelcast.jet.jobbuilder.InfoMap;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.usercode.UserCodeException;
-import com.hazelcast.usercode.grpc.*;
+import com.hazelcast.usercode.grpc.usercode.*;
 
 import com.hazelcast.usercode.UserCodeMessage;
 import com.hazelcast.usercode.transports.MultiplexTransportBase;

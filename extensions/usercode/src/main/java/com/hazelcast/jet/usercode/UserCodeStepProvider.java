@@ -1,5 +1,6 @@
 package com.hazelcast.jet.usercode;
 
+import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.pipeline.ServiceFactory;
@@ -33,7 +34,7 @@ public class UserCodeStepProvider implements StepProvider {
 
     private static Object transform(Object stageContext, String name, InfoMap definition, ILogger logger) throws JobBuilderException {
 
-        UserCodeRuntimeInfo runtimeStartInfo = new UserCodeRuntimeInfo(definition.childAsMap("runtime"));
+        UserCodeRuntimeInfo runtimeInfo = new UserCodeRuntimeInfo(definition.childAsMap("runtime"));
 
         String functionName = definition.childAsString("function");
         String transformName = definition.childAsString("name", "user-code");
@@ -71,7 +72,7 @@ public class UserCodeStepProvider implements StepProvider {
                 // service along.
 
                 .sharedService(
-                        x -> startUserCodeRuntime(x, transformName, runtimeStartInfo),
+                        x -> startUserCodeRuntime(x, transformName, runtimeInfo),
                         UserCodeStepProvider::destroyUserCodeRuntime);
 
         // TODO:
@@ -96,22 +97,26 @@ public class UserCodeStepProvider implements StepProvider {
                 .setName(transformName);
     }
 
-    private static UserCodeRuntime startUserCodeRuntime(ProcessorSupplier.Context processorContext, String name, UserCodeRuntimeInfo startInfo) {
+    private static UserCodeRuntime startUserCodeRuntime(ProcessorSupplier.Context processorContext, String name, UserCodeRuntimeInfo runtimeInfo) {
 
         // TODO: implement this - should be some sort of static user code service?!
         //UserCodeService userCodeService = processorContext.hazelcastInstance().getUserCodeService();
         LoggingService logging = processorContext.hazelcastInstance().getLoggingService();
         logging.getLogger(UserCodeStepProvider.class).info("start user code runtime");
-        String mode;
-        if (startInfo.hasChild("process")) mode = "process";
-        else if (startInfo.hasChild("container")) mode = "container";
-        else if (startInfo.hasChild("passthru")) mode = "passthru";
-        else mode = "unknown";
-        UserCodeService userCodeService = UserCodeServiceFactory.getService(mode, logging);
+        String serviceName;
+        if (runtimeInfo.childIsString("service")) {
+            serviceName = runtimeInfo.childAsString("service");
+        }
+        else {
+            InfoMap serviceInfo = runtimeInfo.childAsMap("service");
+            serviceName = serviceInfo.uniqueChildName();
+        }
+        HazelcastInstance hazelcastInstance = processorContext.hazelcastInstance();
+        UserCodeService userCodeService = UserCodeServiceFactory.getService(hazelcastInstance, serviceName, logging);
         processorContext.managedContext().initialize(userCodeService); // will need the serialization service
 
         // will need it for resources
-        startInfo.setProcessorContext(processorContext);
+        runtimeInfo.setProcessorContext(processorContext);
 
         // complement name, name does not have to be unique, user code service will manage it
         long jobId = processorContext.jobId();
@@ -119,7 +124,7 @@ public class UserCodeStepProvider implements StepProvider {
 
         try {
             // TODO: ??
-            UserCodeRuntime runtime = userCodeService.startRuntime(name, startInfo).get();
+            UserCodeRuntime runtime = userCodeService.startRuntime(name, runtimeInfo).get();
             //runtime.copyTo(localFilePath, targetFilePath).get();
             //runtime.invoke("HZ-COPY-TO", ...)
             return runtime;
