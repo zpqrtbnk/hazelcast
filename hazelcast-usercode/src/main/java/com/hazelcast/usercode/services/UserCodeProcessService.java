@@ -75,13 +75,18 @@ public final class UserCodeProcessService extends UserCodeServiceBase {
             }
         }
 
+		// ensure that the executable file exists
+        Path command0path = Paths.get(command0);
+        if (!Files.exists(command0path)) {
+            throw new UserCodeException("File not found: " + command0);
+        }
+
         // on some OS the file actually needs to be executable
         if (!OsHelper.isWindows()) {
             try {
-                Path dotnetExePath = Paths.get(command0);
-                Set<PosixFilePermission> perms = Files.getPosixFilePermissions(dotnetExePath);
+                Set<PosixFilePermission> perms = Files.getPosixFilePermissions(command0path);
                 perms.add(PosixFilePermission.OWNER_EXECUTE);
-                Files.setPosixFilePermissions(dotnetExePath, perms);
+                Files.setPosixFilePermissions(command0path, perms);
             }
             catch (IOException ex) {
                 throw new UserCodeException("Failed to chmod u+x process.", ex);
