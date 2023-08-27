@@ -57,19 +57,6 @@ public final class UserCodeProcessService extends UserCodeServiceBase {
 
         String command0 = (processPath  == null ? "" : processPath + File.separator) + processName;
 
-        // on some OS the file actually needs to be executable
-        if (!OsHelper.isWindows()) {
-            try {
-                Path dotnetExePath = Paths.get(command0);
-                Set<PosixFilePermission> perms = Files.getPosixFilePermissions(dotnetExePath);
-                perms.add(PosixFilePermission.OWNER_EXECUTE);
-                Files.setPosixFilePermissions(dotnetExePath, perms);
-            }
-            catch (IOException ex) {
-                throw new UserCodeException("Failed to chmod u+x process.", ex);
-            }
-        }
-
         InfoList argsInfo = processInfo.childAsList("args", false);
         int argsSize = 1 + (argsInfo == null ? 0 : argsInfo.size());
         String[] command = new String[argsSize];
@@ -85,6 +72,19 @@ public final class UserCodeProcessService extends UserCodeServiceBase {
                 String arg = argsInfo.itemAsString(i);
                 command[i + 1] = startInfo.expand(arg, expand);
                 //logger.info("DEBUG: args[" + i +"]='" + arg + "' -> command[" + (i+1) + "]=" + command[i+1]);
+            }
+        }
+
+        // on some OS the file actually needs to be executable
+        if (!OsHelper.isWindows()) {
+            try {
+                Path dotnetExePath = Paths.get(command0);
+                Set<PosixFilePermission> perms = Files.getPosixFilePermissions(dotnetExePath);
+                perms.add(PosixFilePermission.OWNER_EXECUTE);
+                Files.setPosixFilePermissions(dotnetExePath, perms);
+            }
+            catch (IOException ex) {
+                throw new UserCodeException("Failed to chmod u+x process.", ex);
             }
         }
 
