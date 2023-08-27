@@ -1,6 +1,7 @@
 package com.hazelcast.usercode.services;
 
 import com.hazelcast.internal.serialization.SerializationService;
+import com.hazelcast.internal.util.OsHelper;
 import com.hazelcast.jet.jobbuilder.InfoList;
 import com.hazelcast.jet.jobbuilder.InfoMap;
 import com.hazelcast.logging.ILogger;
@@ -9,6 +10,11 @@ import com.hazelcast.usercode.*;
 import com.hazelcast.usercode.runtimes.UserCodeProcessRuntime;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
@@ -49,6 +55,21 @@ public final class UserCodeProcessService extends UserCodeServiceBase {
         if (directory != null) directory = startInfo.expand(directory, expand);
         else directory = processPath == null ? System.getProperty("user.dir") : processPath;
 
+        String command0 = (processPath  == null ? "" : processPath + File.separator) + processName;
+
+        // on some OS the file actually needs to be executable
+        if (!OsHelper.isWindows()) {
+            try {
+                Path dotnetExePath = Paths.get(command0);
+                Set<PosixFilePermission> perms = Files.getPosixFilePermissions(dotnetExePath);
+                perms.add(PosixFilePermission.OWNER_EXECUTE);
+                Files.setPosixFilePermissions(dotnetExePath, perms);
+            }
+            catch (IOException ex) {
+                throw new UserCodeException("Failed to chmod u+x process.", ex);
+            }
+        }
+
         InfoList argsInfo = processInfo.childAsList("args", false);
         int argsSize = 1 + (argsInfo == null ? 0 : argsInfo.size());
         String[] command = new String[argsSize];
@@ -56,7 +77,7 @@ public final class UserCodeProcessService extends UserCodeServiceBase {
         //logger.info("DEBUG: " + (argsInfo == null ? "args not found" : "found args"));
         //logger.info("DEBUG: command.length = " + command.length);
 
-        command[0] = (processPath  == null ? "" : processPath + File.separator) + processName;
+        command[0] = command0;
         //logger.info("DEBUG: command[0] = " + command[0]);
 
         if (argsInfo != null) {
