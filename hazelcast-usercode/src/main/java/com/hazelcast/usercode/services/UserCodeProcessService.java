@@ -75,7 +75,7 @@ public final class UserCodeProcessService extends UserCodeServiceBase {
             }
         }
 
-		// ensure that the executable file exists
+        // ensure that the executable file exists
         Path command0path = Paths.get(command0);
         if (!Files.exists(command0path)) {
             throw new UserCodeException("File not found: " + command0);

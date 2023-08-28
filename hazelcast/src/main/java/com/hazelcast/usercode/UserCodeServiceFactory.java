@@ -48,9 +48,16 @@ public final class UserCodeServiceFactory {
                 throw new UserCodeException("Mode '" + mode + "' is not supported.");
         }
 
-        // FIXME address and port of controller = member configuration properties
-        String controllerAddress = "localhost";
-        int controllerPort = 1234;
+        // FIXME address and port of controller should be member configuration properties
+        String controllerAddress = System.getenv("HZ_RUNTIME_CONTROLLER_ADDRESS");
+        if (controllerAddress == null) {
+            controllerAddress = "localhost";
+        }
+        String controllerPortString = System.getenv("HZ_RUNTIME_CONTROLLER_PORT");
+        if (controllerPortString == null) {
+            controllerPortString = "55555";
+        }
+        int controllerPort = Integer.parseInt(controllerPortString);
 
         try{
             Class<?> clazz = Class.forName(className);
