@@ -71,7 +71,7 @@ public final class UserCodeServiceFactory {
                     break;
                 case "container":
                     service = (UserCodeService) clazz
-                            .getConstructor(String.class, String.class, Integer.class, LoggingService.class)
+                            .getConstructor(String.class, String.class, int.class, LoggingService.class)
                             .newInstance(localMember, controllerAddress, controllerPort, logging);
                     break;
             }
