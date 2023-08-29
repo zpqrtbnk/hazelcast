@@ -16,9 +16,9 @@ import io.grpc.stub.AbstractStub;
 
 public final class UserCodeRuntimeController {
 
-    private static final int DEADLINE_FOR_INVOCATION = 10; // seconds
+    private static final int DEADLINE_FOR_INVOCATION = 60; // seconds
     private static final int USERCODERUNTIME_CONTROLLER_KEEP_ALIVE_SECONDS = 1800; // seconds
-    private static final int USERCODERUNTIME_CONTROLLER_KEEP_ALIVE_TIMEOUT_SECONDS = 20; // seconds
+    private static final int USERCODERUNTIME_CONTROLLER_KEEP_ALIVE_TIMEOUT_SECONDS = 60; // seconds
     private final ILogger logger;
     private ManagedChannel channel;
     ControllerGrpc.ControllerFutureStub futureStub;
@@ -46,7 +46,7 @@ public final class UserCodeRuntimeController {
                 .setImage(image)
                 .build();
 
-        int timeoutSeconds = 10;
+        int timeoutSeconds = DEADLINE_FOR_INVOCATION; // TODO make it an option!
 
         ListenableFuture<CreateResponse> future =
             (timeoutSeconds > 0

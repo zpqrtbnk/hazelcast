@@ -186,7 +186,10 @@ public class InfoMap implements Serializable {
 
     public String uniqueChildName() {
         Set<String> keys = source.keySet();
-        if (keys.size() != 1) throw new IllegalStateException("No unique child.");
+        if (keys.size() != 1) {
+			String children = String.join(",", source.keySet());
+			throw new IllegalStateException("Expected unique child, got: " + children + ".");
+		}
         return (String) keys.toArray()[0];
     }
 }

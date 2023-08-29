@@ -43,18 +43,26 @@ public final class UserCodeContainerService extends UserCodeServiceBase {
                 .createContainer(image)
                 .thenApply(containerAddress -> {
 
+					// FIXME cleanup this, conditions are flaky
                     if (startInfo.childIsMap("transport")) {
                         InfoMap transportInfo = startInfo.childAsMap("transport");
-                        transportInfo.setChild("address", containerAddress);
-                        transportInfo.setChild("port", 5252); // FIXME or whatever the default gRPC port is
+						InfoMap grpcInfo = transportInfo.childAsMap("grpc", false);
+						if (grpcInfo == null) {
+							throw new UserCodeException("Invalid transport, must be 'grpc'.");
+						}
+						// FIXME overwriting what's in yaml?! why?! should test hasChild first!
+                        grpcInfo.setChild("address", containerAddress);
+                        grpcInfo.setChild("port", 5252); // FIXME or whatever the default gRPC port is
                     }
                     else {
                         if (startInfo.childIsString("transport") && !startInfo.childAsString("transport").equals("grpc")) {
                             throw new UserCodeException("Invalid transport, must be 'grpc'.");
                         }
+						InfoMap grpcInfo = new InfoMap();
+                        grpcInfo.setChild("address", containerAddress);
+                        grpcInfo.setChild("port", 5252); // FIXME or whatever the default gRPC port is
                         InfoMap transportInfo = new InfoMap();
-                        transportInfo.setChild("address", containerAddress);
-                        transportInfo.setChild("port", 5252); // FIXME or whatever the default gRPC port is
+						transportInfo.setChild("grpc", grpcInfo);
                         startInfo.setChild("transport", transportInfo);
                     }
                     UserCodeTransport transport = createTransport(startInfo);
