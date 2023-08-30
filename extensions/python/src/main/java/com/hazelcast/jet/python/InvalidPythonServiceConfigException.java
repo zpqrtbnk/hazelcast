@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Hazelcast Inc.
+ * Copyright 2023 Hazelcast Inc.
  *
  * Licensed under the Hazelcast Community License (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,9 @@ package com.hazelcast.jet.python;
 import com.hazelcast.jet.JetException;
 
 class InvalidPythonServiceConfigException extends JetException {
+
+    private static final long serialVersionUID = 1L;
+
     InvalidPythonServiceConfigException(String message) {
         super(message);
     }
