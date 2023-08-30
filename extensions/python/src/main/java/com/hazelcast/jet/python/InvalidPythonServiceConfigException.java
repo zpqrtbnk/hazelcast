@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/**
- * Contributes a {@link com.hazelcast.jet.python.PythonTransforms#mapUsingPython}
- * transform that allows you to transform Jet pipeline data using a Python
- * function. See {@link com.hazelcast.jet.python.PythonServiceConfig} for
- * more details.
- *
- * @since Jet 4.0
- */
-@EvolvingApi
 package com.hazelcast.jet.python;
 
-import com.hazelcast.jet.annotation.EvolvingApi;
+import com.hazelcast.jet.JetException;
+
+class InvalidPythonServiceConfigException extends JetException {
+    InvalidPythonServiceConfigException(String message) {
+        super(message);
+    }
+
+    InvalidPythonServiceConfigException(String message, Throwable cause) {
+        super(message, cause);
+    }
+}

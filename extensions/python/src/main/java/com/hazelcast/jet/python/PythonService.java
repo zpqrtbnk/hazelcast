@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Hazelcast Inc.
+ * Copyright 2021 Hazelcast Inc.
  *
  * Licensed under the Hazelcast Community License (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import com.hazelcast.jet.python.impl.grpc.OutputMessage;
 import com.hazelcast.logging.ILogger;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.grpc.ManagedChannel;
+import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
 import javax.annotation.Nonnull;
@@ -41,8 +42,12 @@ import java.util.concurrent.CountDownLatch;
 import static java.lang.Thread.currentThread;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
-// provides the dotnet service
-// i.e. is a proxy to the out-of-process dotnet runtime
+/**
+ * The service object used by the "map using Python" pipeline stage. As a
+ * user you don't have to deal with this class directly. It is used when
+ * you write {@link PythonTransforms#mapUsingPython
+ * stage.apply(PythonService.mapUsingPython(pyConfig))}
+ */
 final class PythonService {
 
     private static final int CREATE_CONTEXT_RETRY_COUNT = 2;
@@ -61,10 +66,10 @@ final class PythonService {
 
     PythonService(PythonServiceContext serviceContext) {
         logger = serviceContext.logger();
-        server = new JetToPythonServer(serviceContext.runtimeBaseDir(), logger, serviceContext);
+        server = new JetToPythonServer(serviceContext.runtimeBaseDir(), logger);
         try {
             int serverPort = server.start();
-            chan = serviceContext.channelFn().apply("127.0.0.1", serverPort)
+            chan = NettyChannelBuilder.forAddress("127.0.0.1", serverPort)
                                       .usePlaintext()
                                       .build();
             JetToPythonStub client = JetToPythonGrpc.newStub(chan);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Hazelcast Inc.
+ * Copyright 2021 Hazelcast Inc.
  *
  * Licensed under the Hazelcast Community License (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,11 @@
  */
 package com.hazelcast.jet.python;
 
-import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.logging.LoggingService;
-import io.grpc.ManagedChannelBuilder;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
@@ -77,16 +74,11 @@ class PythonServiceContext {
 
     private final ILogger logger;
     private final Path runtimeBaseDir;
-    private final BiFunctionEx<String, Integer, ? extends ManagedChannelBuilder<?>> channelFn;
-
-    private final ProcessorSupplier.Context processorContext;
 
     PythonServiceContext(ProcessorSupplier.Context context, PythonServiceConfig cfg) {
-        processorContext = context;
         logger = context.hazelcastInstance().getLoggingService()
                 .getLogger(getClass().getPackage().getName());
         checkIfPythonIsAvailable();
-        this.channelFn = cfg.channelFn();
         try {
             long start = System.nanoTime();
             runtimeBaseDir = recreateRuntimeBaseDir(context, cfg);
@@ -174,8 +166,6 @@ class PythonServiceContext {
     ILogger logger() {
         return logger;
     }
-
-    LoggingService getLoggingService() { return processorContext.hazelcastInstance().getLoggingService(); }
 
     Path runtimeBaseDir() {
         return runtimeBaseDir;
@@ -270,9 +260,5 @@ class PythonServiceContext {
                 }
             }
         }
-    }
-
-    public BiFunctionEx<String, Integer, ? extends ManagedChannelBuilder<?>>    channelFn() {
-        return channelFn;
     }
 }
