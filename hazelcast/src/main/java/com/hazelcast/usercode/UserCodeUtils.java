@@ -16,23 +16,25 @@
 
 package com.hazelcast.usercode;
 
-import com.hazelcast.core.HazelcastException;
+import com.hazelcast.internal.util.OsHelper;
 
-public final class UserCodeException extends HazelcastException {
+public class UserCodeUtils {
 
-    public UserCodeException() {
-        super("UserCode failed.");
-    }
+    public static String getPlatform() {
 
-    public UserCodeException(String message) {
-        super(message);
-    }
+        // note: missing other OS (solaris...) here
+        String os =
+            OsHelper.isWindows() ? "win" :
+            OsHelper.isLinux() ? "linux" :
+            OsHelper.isMac() ? "osx" :
+            "any";
 
-    public UserCodeException(String message, Throwable cause) {
-        super(message, cause);
-    }
+        // note: missing other architectures (aarch64, ppc...) here
+        String arch = System.getProperty("os.arch");
+        if (arch.equals("amd64")) arch = "x64";
+        if (arch.equals("x86_32")) arch = "x86";
+        if (arch.equals("x86_64")) arch = "x64";
 
-    public UserCodeException(Throwable cause) {
-        super("UserCode failed (see inner exception).", cause);
+        return os + "-" + arch;
     }
 }

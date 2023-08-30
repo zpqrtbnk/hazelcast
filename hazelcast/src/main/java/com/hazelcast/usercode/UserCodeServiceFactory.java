@@ -20,15 +20,15 @@ public final class UserCodeServiceFactory {
     public static UserCodeService getService(HazelcastInstance hazelcastInstance, String mode, LoggingService logging) {
 
         // TODO: do better, we're talking singletons here
-        // and... we should multi-thread better and a cluster should support 1 unique service?
+        //  this is not multi-threaded = bad
+        //  how can we have 1 singleton factory?
 
         UserCodeService service = services.get(mode);
         if (service != null) {
             return service;
         }
 
-        // FIXME revisit format
-        // FIXME getAddress().toString() returns [192.168.0.111]:5701 and what are these brackets?!
+        // beware getAddress().toString() returns [192.168.0.111]:5701 and, brackets?!
         Address memberAddress = hazelcastInstance.getCluster().getLocalMember().getAddress();
         String clusterName = hazelcastInstance.getConfig().getClusterName();
         String localMember = memberAddress.getHost() + ";" + memberAddress.getPort() + ";" + clusterName;

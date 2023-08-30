@@ -16,23 +16,10 @@
 
 package com.hazelcast.usercode;
 
-import com.hazelcast.core.HazelcastException;
-
-public final class UserCodeException extends HazelcastException {
-
-    public UserCodeException() {
-        super("UserCode failed.");
-    }
-
-    public UserCodeException(String message) {
-        super(message);
-    }
-
-    public UserCodeException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public UserCodeException(Throwable cause) {
-        super("UserCode failed (see inner exception).", cause);
+final class UserCodeConstants {
+    public final class FunctionNames {
+        public final static String Error = ".ERROR";
+        public final static String Connect = ".CONNECT";
+        public final static String End = ".END";
     }
 }

@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008-2023, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hazelcast.usercode;
 
 import com.hazelcast.internal.util.OsHelper;
@@ -13,17 +29,16 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-// contains info required for starting a runtime
+// contains info describing a runtime and the associated transport
 public final class UserCodeRuntimeInfo extends JobBuilderInfoMap implements Serializable {
 
     private final Map<String, String> resourceDirectories = new HashMap<>();
     private final String platform;
-
     private ProcessorSupplier.Context processorContext;
 
     public UserCodeRuntimeInfo(JobBuilderInfoMap info) {
         super(info.getSource());
-        this.platform = determinePlatform();
+        this.platform = UserCodeUtils.getPlatform();
     }
 
     public String getPlatform() {
@@ -116,22 +131,5 @@ public final class UserCodeRuntimeInfo extends JobBuilderInfoMap implements Seri
         }
         sb.append(source, pos, source.length());
         return sb.toString();
-    }
-
-    private static String determinePlatform() {
-        // note: missing other OS (solaris...) here
-        String os =
-            OsHelper.isWindows() ? "win" :
-            OsHelper.isLinux() ? "linux" :
-            OsHelper.isMac() ? "osx" :
-            "any";
-
-        // note: missing other architectures (aarch64, ppc...) here
-        String arch = System.getProperty("os.arch");
-        if (arch.equals("amd64")) arch = "x64";
-        if (arch.equals("x86_32")) arch = "x86";
-        if (arch.equals("x86_64")) arch = "x64";
-
-        return os + "-" + arch;
     }
 }
