@@ -3,14 +3,14 @@ package com.hazelcast.jet.jobbuilder;
 import java.io.Serializable;
 import java.util.*;
 
-public class InfoMap implements Serializable {
+public class JobBuilderInfoMap implements Serializable {
     private final Map<String, Object> source;
 
-    public InfoMap() {
+    public JobBuilderInfoMap() {
         this(new HashMap<>());
     }
 
-    public InfoMap(Map<String, Object> source) {
+    public JobBuilderInfoMap(Map<String, Object> source) {
         this.source = source;
     }
 
@@ -31,18 +31,18 @@ public class InfoMap implements Serializable {
         return value instanceof Map<?,?>;
     }
 
-    public InfoMap childAsMap(String name) {
+    public JobBuilderInfoMap childAsMap(String name) {
         return childAsMap(name, true);
     }
 
-    public InfoMap childAsMap(String name, boolean required) {
+    public JobBuilderInfoMap childAsMap(String name, boolean required) {
         Object value = source.get(name);
         if (value == null) {
             if (required) throw new IllegalArgumentException("No child with name '" + name + "'.");
             return null;
         }
         if (!(value instanceof Map<?,?>)) throw new IllegalStateException("Child with name '" + name + "' is not Map<,> but " + value.getClass() + ".");
-        return new InfoMap((Map<String, Object>) value);
+        return new JobBuilderInfoMap((Map<String, Object>) value);
     }
 
     public boolean childIsList(String name) {
@@ -50,18 +50,18 @@ public class InfoMap implements Serializable {
         return value instanceof List<?>;
     }
 
-    public InfoList childAsList(String name) {
+    public JobBuilderInfoList childAsList(String name) {
         return childAsList(name, true);
     }
 
-    public InfoList childAsList(String name, boolean required) {
+    public JobBuilderInfoList childAsList(String name, boolean required) {
         Object value = source.get(name);
         if (value == null) {
             if (required) throw new IllegalArgumentException("No child with name '" + name + "'.");
             return null;
         }
         if (!(value instanceof List<?>)) throw new IllegalStateException("Child with name '" + name + "' is not List<> but " + value.getClass() + ".");
-        return new InfoList((List<Object>) value);
+        return new JobBuilderInfoList((List<Object>) value);
     }
 
     public boolean childIsString(String name) {

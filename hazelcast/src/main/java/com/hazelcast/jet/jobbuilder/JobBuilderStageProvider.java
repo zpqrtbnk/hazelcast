@@ -16,14 +16,15 @@
 
 package com.hazelcast.jet.jobbuilder;
 
-// represents the exception throws by the JobBuilder when it fails to build a job
-public final class JobBuilderException extends Exception {
+// provides stages for the JobBuilder
+public interface JobBuilderStageProvider {
 
-    public JobBuilderException(String message) {
-        super(message);
-    }
+    // gets the source stages, or null if none are provided
+    SourceStage[] getSources();
 
-    public JobBuilderException(String message, Throwable cause) {
-        super(message, cause);
-    }
+    // gets the transform stages, or null if none are provided
+    TransformStage[] getTransforms();
+
+    // gets the sink stages, or null if none are provided
+    SinkStage[] getSinks();
 }

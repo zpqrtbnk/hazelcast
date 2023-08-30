@@ -21,8 +21,11 @@ import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.client.impl.protocol.codec.JetSubmitYamlJobCodec;
+import com.hazelcast.internal.yaml.YamlException;
+import com.hazelcast.internal.yaml.YamlLoader;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.operation.SubmitJobOperation;
+import com.hazelcast.jet.jobbuilder.JobBuilderInfoMap;
 import com.hazelcast.jet.jobbuilder.JobBuilder;
 import com.hazelcast.jet.jobbuilder.JobBuilderException;
 import com.hazelcast.logging.ILogger;
@@ -30,6 +33,7 @@ import com.hazelcast.security.permission.ActionConstants;
 import com.hazelcast.spi.impl.operationservice.Operation;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -40,9 +44,10 @@ public class JetSubmitYamlJobMessageTask extends AbstractJetMessageTask<JetSubmi
     }
 
     @Override
-    protected UUID getLightJobCoordinator() { return parameters.lightJobCoordinator; }
+    protected UUID getLightJobCoordinator() {
+        return parameters.lightJobCoordinator;
+    }
 
-    // from AbstractInvocationMessageTask
     @Override
     protected CompletableFuture<Object> processInternal() {
 
@@ -65,22 +70,40 @@ public class JetSubmitYamlJobMessageTask extends AbstractJetMessageTask<JetSubmi
 
     // must be provided but will never get invoked because we override processInternal
     @Override
-    protected Operation prepareOperation() { return null; }
+    protected Operation prepareOperation() {
+        return null;
+    }
 
     protected Operation prepareOperationThrows() throws JobBuilderException {
 
         ILogger logger = nodeEngine.getLogger(JobBuilder.class);
 
-        JobBuilder jobBuilder = new JobBuilder(logger);
-        jobBuilder.parse(parameters.jobDefinition);
+        Object jobDefinitionObject;
+        try {
+            jobDefinitionObject = YamlLoader.loadRaw(parameters.jobDefinition);
+        }
+        catch (YamlException ex) {
+            throw new JobBuilderException("An error occurred while loading and parsing the YAML string.", ex.getCause());
+        }
 
-        boolean isLightJob = parameters.lightJobCoordinator != null;
+        JobBuilderInfoMap jobDefinition;
+        try {
+            jobDefinition = new JobBuilderInfoMap((Map<String, Object>) jobDefinitionObject);
+        }
+        catch (Exception ex) {
+            throw new JobBuilderException("The YAML string does not expose a map.");
+        }
+
+        JobBuilder jobBuilder = new JobBuilder(logger);
+        jobBuilder.parse(jobDefinition);
 
         JobConfig deserializedJobConfig = jobBuilder.getConfig();
-        Data serializedJobConfig = null; // no point serializing
+        Data serializedJobConfig = null; // no point serializing, will be null
 
         Object deserializedJobDefinition = jobBuilder.getPipeline();
         Data serializedJobDefinition = null; // the jobDefinition for non-light job *must* be serialized
+
+        boolean isLightJob = parameters.lightJobCoordinator != null;
         if (!isLightJob) {
             serializedJobDefinition = nodeEngine.toData(deserializedJobDefinition);
             deserializedJobDefinition = null;
@@ -92,16 +115,6 @@ public class JetSubmitYamlJobMessageTask extends AbstractJetMessageTask<JetSubmi
                 isLightJob,
                 endpoint.getSubject());
     }
-
-//    @Override
-//    protected ClientMessage encodeResponse(Object o) {
-//        return super.encodeResponse(o);
-//    }
-//
-//    @Override
-//    protected ClientMessage encodeException(Throwable throwable) {
-//        return super.encodeException(throwable);
-//    }
 
     @Override
     public String getMethodName() {

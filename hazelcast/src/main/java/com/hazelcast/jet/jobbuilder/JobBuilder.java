@@ -17,10 +17,13 @@
 package com.hazelcast.jet.jobbuilder;
 
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.config.ResourceConfig;
+import com.hazelcast.jet.config.ResourceConfigFactory;
 import com.hazelcast.jet.config.ResourceType;
 import com.hazelcast.jet.pipeline.*;
 import com.hazelcast.logging.ILogger;
 
+import javax.annotation.Nonnull;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,16 +32,27 @@ import java.util.ServiceLoader;
 // builds jobs
 public final class JobBuilder {
 
-    private static final Map<String, Function4<Pipeline, String, InfoMap, ILogger, Object>> sources = new HashMap<>();
-    private static final Map<String, Consumer4<Object, String, InfoMap, ILogger>> sinks = new HashMap<>();
-    private static final Map<String, Function4<Object, String, InfoMap, ILogger, Object>> transforms = new HashMap<>();
+    private static final Map<String, Function4<Pipeline, String, JobBuilderInfoMap, ILogger, Object>> sources = new HashMap<>();
+    private static final Map<String, Consumer4<Object, String, JobBuilderInfoMap, ILogger>> sinks = new HashMap<>();
+    private static final Map<String, Function4<Object, String, JobBuilderInfoMap, ILogger, Object>> transforms = new HashMap<>();
+
+    private static final URL dummyUrl = getDummyURL(); // a valid, dummy URL
+
+    private static @Nonnull URL getDummyURL() {
+        try {
+            return new URL("file:///dev/null");
+        }
+        catch (Exception ex) {
+            return null; // this will not happen
+        }
+    }
 
     private final Object mutex = new Object();
     private final ILogger logger;
     private boolean initialized;
     private Pipeline pipeline;
     private JobConfig jobConfig;
-    private Map<String, Object> stages = new HashMap<>();
+    private final Map<String, Object> stages = new HashMap<>();
     private Pipeline pipelineContext;
     private Object stageContext;
 
@@ -50,12 +64,12 @@ public final class JobBuilder {
 
             if (!initialized) {
 
-                addSteps(new BuiltinStepProvider());
+                addProvidedStages(new BuiltinStageProvider());
 
-                ServiceLoader<StepProvider> providers = ServiceLoader.load(StepProvider.class);
-                for (StepProvider provider : providers) {
+                ServiceLoader<JobBuilderStageProvider> providers = ServiceLoader.load(JobBuilderStageProvider.class);
+                for (JobBuilderStageProvider provider : providers) {
                     logger.fine("Registering steps from provider: " + provider);
-                    addSteps(provider);
+                    addProvidedStages(provider);
                 }
 
                 initialized = true;
@@ -63,25 +77,25 @@ public final class JobBuilder {
         }
     }
 
-    private void addSteps(StepProvider provider)
+    private void addProvidedStages(JobBuilderStageProvider provider)
     {
-        SourceStep[] sourceSteps = provider.getSources();
-        if (sourceSteps != null) {
-            for (SourceStep step : sourceSteps) {
+        SourceStage[] providedSources = provider.getSources();
+        if (providedSources != null) {
+            for (SourceStage step : providedSources) {
                 sources.put(step.getName(), step.getFunction());
             }
         }
 
-        TransformStep[] transformSteps = provider.getTransforms();
-        if (transformSteps != null) {
-            for (TransformStep step : transformSteps) {
+        TransformStage[] providedTransforms = provider.getTransforms();
+        if (providedTransforms != null) {
+            for (TransformStage step : providedTransforms) {
                 transforms.put(step.getName(), step.getFunction());
             }
         }
 
-        SinkStep[] sinkSteps = provider.getSinks();
-        if (sinkSteps != null) {
-            for (SinkStep step : sinkSteps) {
+        SinkStage[] providedSinks = provider.getSinks();
+        if (providedSinks != null) {
+            for (SinkStage step : providedSinks) {
                 sinks.put(step.getName(), step.getFunction());
             }
         }
@@ -98,20 +112,16 @@ public final class JobBuilder {
     }
 
     // parses a job definition and creates the job pipeline and configuration
-    public void parse(InfoMap definition) throws JobBuilderException {
+    public void parse(JobBuilderInfoMap definition) throws JobBuilderException {
 
-        InfoMap jobDefinition = definition.childAsMap("job");
-        //YamlMapping jobMapping = ((YamlMapping) root).childAsMapping("job");
-        //if (jobMapping == null) throw new JobBuilderException("panic: missing job declaration");
+        JobBuilderInfoMap jobDefinition = definition.childAsMap("job");
         enterJobContext(jobDefinition);
 
         // job/pipeline is a sequence
-        InfoList pipelineDefinition = jobDefinition.childAsList("pipeline");
-        //YamlSequence pipeline = jobMapping.childAsSequence("pipeline");
-        //if (pipeline == null) throw new JobBuilderException("panic: missing job/pipeline declaration");
+        JobBuilderInfoList pipelineDefinition = jobDefinition.childAsList("pipeline");
 
         for (int i = 0; i < pipelineDefinition.size(); i++) {
-            InfoMap fragmentDefinition = pipelineDefinition.itemAsMap(i);
+            JobBuilderInfoMap fragmentDefinition = pipelineDefinition.itemAsMap(i);
             String fragmentName = fragmentDefinition.uniqueChildName();
 
             // sequence can be either
@@ -124,10 +134,10 @@ public final class JobBuilder {
                 enterStageContext(fragmentName);
             }
 
-            InfoList stageDefinitions = fragmentDefinition.childAsList(fragmentName);
+            JobBuilderInfoList stageDefinitions = fragmentDefinition.childAsList(fragmentName);
             for (int j = 0; j < stageDefinitions.size(); j++)
             {
-                InfoMap stageDefinition = stageDefinitions.itemAsMap(j);
+                JobBuilderInfoMap stageDefinition = stageDefinitions.itemAsMap(j);
 
                 String sourceName = stageDefinition.childAsString("source", false);
                 String sinkName = stageDefinition.childAsString("sink", false);
@@ -157,41 +167,37 @@ public final class JobBuilder {
         }
     }
 
-    private void enterJobContext(InfoMap jobDefinition) throws JobBuilderException {
-        logger.fine("enter job context");
-        // TODO: job properties
+    private void enterJobContext(JobBuilderInfoMap jobDefinition) throws JobBuilderException {
+
         jobConfig = new JobConfig();
         String name = jobDefinition.childAsString("name", false);
         if (name != null) {
-            logger.fine("  name: " + name);
             jobConfig.setName(name);
         }
 
+        // TODO: handle more job properties
+
         // job/resources is a sequence
-        InfoList resources = jobDefinition.childAsList("resources", false);
-        if (resources == null) {
-            logger.info("  resources: none");
-        }
-        else {
-            StringBuilder s = new StringBuilder();
-            s.append("  resources:\n");
+        JobBuilderInfoList resources = jobDefinition.childAsList("resources", false);
+        if (resources != null) {
+
             for (int i = 0; i < resources.size(); i++) {
-                InfoMap n = resources.itemAsMap(i);
+                JobBuilderInfoMap n = resources.itemAsMap(i);
                 String id = n.childAsString("id");
                 ResourceType resourceType = ResourceType.valueOf(n.childAsString("type"));
-                s.append("    " + resourceType + " " + id);
-                URL url = null; // FIXME why can't we just use the path, or...?
-                try { url = new URL("file:///dev/null"); } catch (Exception e) {
-                    throw new JobBuilderException("panic: not an url");
+
+                // need to add the resource to the config without the actual path,
+                // so we're using a dummy URL, and we bypass the path verifications
+                ResourceConfig cfg = ResourceConfigFactory.New(dummyUrl, id, resourceType);
+                if (jobConfig.getResourceConfigs().putIfAbsent(id, cfg) != null) {
+                    throw new IllegalArgumentException("Resource with id:" + id + " already exists.");
                 }
-                jobConfig.add(url, id, resourceType); // FIXME public ctor
             }
-            logger.info(s.toString());
         }
     }
 
     private void enterPipelineContext() {
-        logger.fine("enter pipeline context");
+
         if (pipeline == null) {
             pipeline = Pipeline.create();
         }
@@ -200,62 +206,49 @@ public final class JobBuilder {
     }
 
     private void enterStageContext(String stageId) throws JobBuilderException {
-        logger.fine("enter stage context '" + stageId + "'");
+
         Object stage = stages.get(stageId);
         if (stage == null) {
-            throw new JobBuilderException("panic: unknown stage '" + stageId + "'");
+            throw new JobBuilderException("Unknown stage '" + stageId + "'.");
         }
         pipelineContext = null;
         stageContext = stage;
     }
 
-    // Stage i
-    //   GeneralStage i
-    //     BatchStage i
-    //       BatchStageImpl : AbstractStage
-    //     StreamStage i
-    //       StreamStageImpl : AbstractStage
-    //   SinkStage i
-    //     SinkStageImpl : AbstractStage
-    //   AbstractStage a
-    //     ComputeStageImplBase a
-    // StreamSourceStage i
-    //   StreamSourceStageImpl
+    private void addSource(String name, JobBuilderInfoMap definition) throws JobBuilderException {
 
-    private void addSource(String name, InfoMap definition) throws JobBuilderException {
-        logger.fine("add source: " + name);
         if (pipelineContext == null || stageContext != null) {
             throw new JobBuilderException("panic: invalid context");
         }
-        Function4<Pipeline, String, InfoMap, ILogger, Object> f = sources.get(name);
+        Function4<Pipeline, String, JobBuilderInfoMap, ILogger, Object> f = sources.get(name);
         if (f == null) {
-            throw new JobBuilderException("panic: unknown source '" + name + "'");
+            throw new JobBuilderException("Unknown source '" + name + "'.");
         }
         stageContext = f.apply(pipelineContext, name, definition, logger);
         pipelineContext = null;
     }
 
-    private void addSink(String name, InfoMap definition) throws JobBuilderException {
-        logger.fine("add sink: " + name);
+    private void addSink(String name, JobBuilderInfoMap definition) throws JobBuilderException {
+
         if (pipelineContext != null || stageContext == null) {
             throw new JobBuilderException("panic: invalid context");
         }
-        Consumer4<Object, String, InfoMap, ILogger> f = sinks.get(name);
+        Consumer4<Object, String, JobBuilderInfoMap, ILogger> f = sinks.get(name);
         if (f == null) {
-            throw new JobBuilderException("panic: unknown sink '" + name + "'");
+            throw new JobBuilderException("Unknown sink '" + name + "'.");
         }
         f.accept(stageContext, name, definition, logger);
         stageContext = null;
     }
 
-    private void addTransform(String name, InfoMap definition) throws JobBuilderException {
+    private void addTransform(String name, JobBuilderInfoMap definition) throws JobBuilderException {
         logger.fine("add transform: " + name);
         if (pipelineContext != null || stageContext == null) {
             throw new JobBuilderException("panic: invalid context");
         }
-        Function4<Object, String, InfoMap, ILogger, Object> f = transforms.get(name);
+        Function4<Object, String, JobBuilderInfoMap, ILogger, Object> f = transforms.get(name);
         if (f == null) {
-            throw new JobBuilderException("panic: unknown transform '" + name + "'");
+            throw new JobBuilderException("Unknown transform '" + name + "'.");
         }
         stageContext = f.apply(stageContext, name, definition, logger);
     }

@@ -166,3 +166,4 @@ public class ResourceConfig implements IdentifiedDataSerializable {
         url = in.readObject();
     }
 }
+

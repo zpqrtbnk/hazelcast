@@ -4,11 +4,11 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
-public class InfoList implements Serializable {
+public class JobBuilderInfoList implements Serializable {
 
     private final List<Object> source;
 
-    public InfoList(List<Object> source) {
+    public JobBuilderInfoList(List<Object> source) {
         this.source = source;
     }
 
@@ -25,13 +25,13 @@ public class InfoList implements Serializable {
         return source.get(index);
     }
 
-    public InfoMap itemAsMap(int index) {
+    public JobBuilderInfoMap itemAsMap(int index) {
         Object value = item(index);
         if (value == null) {
             throw new IllegalArgumentException("Null child at name '" + index + "'.");
         }
         if (!(value instanceof Map<?,?>)) throw new IllegalStateException("Child at index '" + index + "' is not Map<,> but " + value.getClass() + ".");
-        return new InfoMap((Map<String,Object>) value);
+        return new JobBuilderInfoMap((Map<String,Object>) value);
     }
 
     public String itemAsString(int index) {

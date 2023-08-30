@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.jobbuilder;
+package com.hazelcast.jet.config;
 
-// provides steps for the JobBuilder
-public interface StepProvider {
+import com.hazelcast.spi.annotation.PrivateApi;
 
-    // gets the source steps, or null if none are provided
-    SourceStep[] getSources();
+import javax.annotation.Nonnull;
+import java.net.URL;
 
-    // gets the transform steps, or null if none are provided
-    TransformStep[] getTransforms();
+@PrivateApi
+public class ResourceConfigFactory {
 
-    // gets the sink steps, or null if none are provided
-    SinkStep[] getSinks();
+    public static ResourceConfig New(@Nonnull URL url, @Nonnull String id, @Nonnull ResourceType resourceType) {
+        return new ResourceConfig(url, id, resourceType);
+    }
 }

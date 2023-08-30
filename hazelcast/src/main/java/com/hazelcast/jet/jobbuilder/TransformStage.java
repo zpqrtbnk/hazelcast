@@ -16,14 +16,23 @@
 
 package com.hazelcast.jet.jobbuilder;
 
-// represents the exception throws by the JobBuilder when it fails to build a job
-public final class JobBuilderException extends Exception {
+import com.hazelcast.logging.ILogger;
 
-    public JobBuilderException(String message) {
-        super(message);
+public class TransformStage {
+
+    private final String name;
+    private final Function4<Object, String, JobBuilderInfoMap, ILogger, Object> function;
+
+    public TransformStage(String name, Function4<Object, String, JobBuilderInfoMap, ILogger, Object> function) {
+        this.name = name;
+        this.function = function;
     }
 
-    public JobBuilderException(String message, Throwable cause) {
-        super(message, cause);
+    public String getName() {
+        return name;
+    }
+
+    public Function4<Object, String, JobBuilderInfoMap, ILogger, Object> getFunction() {
+        return function;
     }
 }

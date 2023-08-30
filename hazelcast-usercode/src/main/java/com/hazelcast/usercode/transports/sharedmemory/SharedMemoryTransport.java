@@ -1,6 +1,6 @@
 package com.hazelcast.usercode.transports.sharedmemory;
 
-import com.hazelcast.jet.jobbuilder.InfoMap;
+import com.hazelcast.jet.jobbuilder.JobBuilderInfoMap;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.usercode.UserCodeException;
@@ -24,7 +24,7 @@ public final class SharedMemoryTransport extends MultiplexTransportBase implemen
     private final ILogger logger;
     private SharedMemoryPipe pipe;
 
-    public SharedMemoryTransport(InfoMap transportInfo, LoggingService logging) {
+    public SharedMemoryTransport(JobBuilderInfoMap transportInfo, LoggingService logging) {
 
         this.uniqueId = transportInfo.childAsUUID("uid");
         this.logger = logging.getLogger(SharedMemoryTransport.class);

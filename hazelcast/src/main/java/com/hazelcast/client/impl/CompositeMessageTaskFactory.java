@@ -27,14 +27,12 @@ import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.internal.util.ExceptionUtil;
 import com.hazelcast.internal.util.ServiceLoader;
 import com.hazelcast.internal.util.collection.Int2ObjectHashMap;
-import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import java.lang.reflect.Constructor;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class CompositeMessageTaskFactory implements MessageTaskFactory {
     private static final String FACTORY_ID = "com.hazelcast.client.impl.protocol.MessageTaskFactoryProvider";
@@ -54,11 +52,6 @@ public class CompositeMessageTaskFactory implements MessageTaskFactory {
 
     private void loadProvider(MessageTaskFactoryProvider provider) {
         Int2ObjectHashMap<MessageTaskFactory> providerFactories = provider.getFactories();
-        Logger logger = Logger.getLogger("com.hazelcast.debug");
-        logger.info("get factories for " + provider.getClass());
-        for (int id : providerFactories.keySet()) {
-            logger.info("f: " + id);
-        }
         this.factories.putAll(providerFactories);
     }
 

@@ -4,7 +4,7 @@ import com.hazelcast.internal.util.OsHelper;
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.config.ResourceType;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.jobbuilder.InfoMap;
+import com.hazelcast.jet.jobbuilder.JobBuilderInfoMap;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -14,14 +14,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 // contains info required for starting a runtime
-public final class UserCodeRuntimeInfo extends InfoMap implements Serializable {
+public final class UserCodeRuntimeInfo extends JobBuilderInfoMap implements Serializable {
 
     private final Map<String, String> resourceDirectories = new HashMap<>();
     private final String platform;
 
     private ProcessorSupplier.Context processorContext;
 
-    public UserCodeRuntimeInfo(InfoMap info) {
+    public UserCodeRuntimeInfo(JobBuilderInfoMap info) {
         super(info.getSource());
         this.platform = determinePlatform();
     }

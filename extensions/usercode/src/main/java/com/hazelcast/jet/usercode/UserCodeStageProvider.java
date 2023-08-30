@@ -12,27 +12,27 @@ import com.hazelcast.usercode.*;
 
 import java.util.concurrent.ExecutionException;
 
-public class UserCodeStepProvider implements StepProvider {
+public class UserCodeStageProvider implements JobBuilderStageProvider {
 
     @Override
-    public SourceStep[] getSources() {
+    public SourceStage[] getSources() {
         return null;
     }
 
     @Override
-    public TransformStep[] getTransforms() {
+    public TransformStage[] getTransforms() {
 
-        return new TransformStep[] {
-                new TransformStep("user-code", UserCodeStepProvider::transform)
+        return new TransformStage[] {
+                new TransformStage("user-code", UserCodeStageProvider::transform)
         };
     }
 
     @Override
-    public SinkStep[] getSinks() {
+    public SinkStage[] getSinks() {
         return null;
     }
 
-    private static Object transform(Object stageContext, String name, InfoMap definition, ILogger logger) throws JobBuilderException {
+    private static Object transform(Object stageContext, String name, JobBuilderInfoMap definition, ILogger logger) throws JobBuilderException {
 
         UserCodeRuntimeInfo runtimeInfo = new UserCodeRuntimeInfo(definition.childAsMap("runtime"));
 
@@ -73,25 +73,13 @@ public class UserCodeStepProvider implements StepProvider {
 
                 .sharedService(
                         x -> startUserCodeRuntime(x, transformName, runtimeInfo),
-                        UserCodeStepProvider::destroyUserCodeRuntime);
-
-        // TODO:
-        //  - deal with batch vs stream
-        //  - parameters for usercode service?
-        //  - can we pass files to the thing? even for container we could use transform.py
-        //  - serialize DeserializingEntry (in efficient way)
+                        UserCodeStageProvider::destroyUserCodeRuntime);
 
         return streamStage
                 .mapUsingServiceAsync(serviceFactory, parallelOperations, preserveOrder, (service, input) -> {
 
                     UserCodeRuntime runtime = (UserCodeRuntime) service;
                     return runtime.invoke(functionName, input);
-                    //if (runtime == null) throw new UserCodeException("null runtime"); // FIXME <-- here?
-                    //if (runtime.getSerializationService() == null) throw new UserCodeException("null serialization"); // FIXME
-                    //Data payload = runtime.getSerializationService().toData(input);
-                    //return runtime.invoke(functionName, payload).thenApply(x -> {
-                    //    return runtime.getSerializationService().toObject(x); // FIXME or should this be explicit?
-                    //});
                 })
                 .setLocalParallelism(parallelProcessors)
                 .setName(transformName);
@@ -102,13 +90,13 @@ public class UserCodeStepProvider implements StepProvider {
         // TODO: implement this - should be some sort of static user code service?!
         //UserCodeService userCodeService = processorContext.hazelcastInstance().getUserCodeService();
         LoggingService logging = processorContext.hazelcastInstance().getLoggingService();
-        logging.getLogger(UserCodeStepProvider.class).info("start user code runtime");
+        logging.getLogger(UserCodeStageProvider.class).info("start user code runtime");
         String serviceName;
         if (runtimeInfo.childIsString("service")) {
             serviceName = runtimeInfo.childAsString("service");
         }
         else {
-            InfoMap serviceInfo = runtimeInfo.childAsMap("service");
+            JobBuilderInfoMap serviceInfo = runtimeInfo.childAsMap("service");
             serviceName = serviceInfo.uniqueChildName();
         }
         HazelcastInstance hazelcastInstance = processorContext.hazelcastInstance();
@@ -123,14 +111,13 @@ public class UserCodeStepProvider implements StepProvider {
         name = jobId + "-" + name;
 
         try {
-            // TODO: ??
+            // TODO: can we copy files and resources over to the other side?
             UserCodeRuntime runtime = userCodeService.startRuntime(name, runtimeInfo).get();
             //runtime.copyTo(localFilePath, targetFilePath).get();
             //runtime.invoke("HZ-COPY-TO", ...)
             return runtime;
         }
         catch (InterruptedException | ExecutionException ex) {
-            // TODO: what shall we do?
             throw new UserCodeException("Failed to start runtime.", ex);
         }
     }
@@ -141,7 +128,7 @@ public class UserCodeStepProvider implements StepProvider {
             runtime.getUserCodeService().destroyRuntime(runtime).get();
         }
         catch (InterruptedException | ExecutionException ex) {
-            // TODO: what shall we do?
+            throw new UserCodeException("Failed to destroy runtime.", ex);
         }
     }
 }

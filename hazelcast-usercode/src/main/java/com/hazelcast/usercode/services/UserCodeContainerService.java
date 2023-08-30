@@ -1,6 +1,6 @@
 package com.hazelcast.usercode.services;
 
-import com.hazelcast.jet.jobbuilder.InfoMap;
+import com.hazelcast.jet.jobbuilder.JobBuilderInfoMap;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.usercode.*;
@@ -27,7 +27,7 @@ public final class UserCodeContainerService extends UserCodeServiceBase {
     @Override
     public CompletableFuture<UserCodeRuntime> startRuntime(String name, UserCodeRuntimeInfo startInfo) throws UserCodeException {
 
-        InfoMap containerInfo = startInfo.childAsMap("service").childAsMap("container");
+        JobBuilderInfoMap containerInfo = startInfo.childAsMap("service").childAsMap("container");
 
         // allocate the runtime unique identifier
         UUID uniqueId = UUID.randomUUID();
@@ -45,8 +45,8 @@ public final class UserCodeContainerService extends UserCodeServiceBase {
 
 					// FIXME cleanup this, conditions are flaky
                     if (startInfo.childIsMap("transport")) {
-                        InfoMap transportInfo = startInfo.childAsMap("transport");
-						InfoMap grpcInfo = transportInfo.childAsMap("grpc", false);
+                        JobBuilderInfoMap transportInfo = startInfo.childAsMap("transport");
+						JobBuilderInfoMap grpcInfo = transportInfo.childAsMap("grpc", false);
 						if (grpcInfo == null) {
 							throw new UserCodeException("Invalid transport, must be 'grpc'.");
 						}
@@ -58,10 +58,10 @@ public final class UserCodeContainerService extends UserCodeServiceBase {
                         if (startInfo.childIsString("transport") && !startInfo.childAsString("transport").equals("grpc")) {
                             throw new UserCodeException("Invalid transport, must be 'grpc'.");
                         }
-						InfoMap grpcInfo = new InfoMap();
+						JobBuilderInfoMap grpcInfo = new JobBuilderInfoMap();
                         grpcInfo.setChild("address", containerAddress);
                         grpcInfo.setChild("port", 5252); // FIXME or whatever the default gRPC port is
-                        InfoMap transportInfo = new InfoMap();
+                        JobBuilderInfoMap transportInfo = new JobBuilderInfoMap();
 						transportInfo.setChild("grpc", grpcInfo);
                         startInfo.setChild("transport", transportInfo);
                     }

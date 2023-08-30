@@ -1,13 +1,11 @@
 package com.hazelcast.usercode.services;
 
-import com.hazelcast.jet.jobbuilder.InfoMap;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.usercode.*;
 import com.hazelcast.usercode.runtimes.PassThruRuntime;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
 public class UserCodePassThruService extends UserCodeServiceBase {

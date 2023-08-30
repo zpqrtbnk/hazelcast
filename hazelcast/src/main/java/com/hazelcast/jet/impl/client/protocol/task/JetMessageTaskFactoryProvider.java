@@ -21,7 +21,6 @@ import com.hazelcast.client.impl.protocol.MessageTaskFactoryProvider;
 import com.hazelcast.client.impl.protocol.codec.*;
 import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.util.collection.Int2ObjectHashMap;
-import com.hazelcast.jet.debug.JetDebugMessageTask;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
@@ -37,8 +36,6 @@ public class JetMessageTaskFactoryProvider implements MessageTaskFactoryProvider
     public void initFactories() {
         factories.put(JetSubmitYamlJobCodec.REQUEST_MESSAGE_TYPE,
                 (cm, con) -> new JetSubmitYamlJobMessageTask(cm, node, con));
-        factories.put(JetDebugCodec.REQUEST_MESSAGE_TYPE,
-                (cm, con) -> new JetDebugMessageTask(cm, node, con));
         factories.put(JetSubmitJobCodec.REQUEST_MESSAGE_TYPE,
                 (cm, con) -> new JetSubmitJobMessageTask(cm, node, con));
         factories.put(JetTerminateJobCodec.REQUEST_MESSAGE_TYPE,

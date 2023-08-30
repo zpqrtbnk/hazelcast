@@ -1,4 +1,4 @@
-package com.hazelcast.jet.jobbuilder;
+package com.hazelcast.usercode.experiments;
 
 public interface Lambda<T, R> {
 

@@ -2,8 +2,8 @@ package com.hazelcast.usercode.services;
 
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.util.OsHelper;
-import com.hazelcast.jet.jobbuilder.InfoList;
-import com.hazelcast.jet.jobbuilder.InfoMap;
+import com.hazelcast.jet.jobbuilder.JobBuilderInfoList;
+import com.hazelcast.jet.jobbuilder.JobBuilderInfoMap;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.usercode.*;
@@ -37,7 +37,7 @@ public final class UserCodeProcessService extends UserCodeServiceBase {
     @Override
     public CompletableFuture<UserCodeRuntime> startRuntime(String name, UserCodeRuntimeInfo startInfo) throws UserCodeException {
 
-        InfoMap processInfo = startInfo.childAsMap("service").childAsMap("process");
+        JobBuilderInfoMap processInfo = startInfo.childAsMap("service").childAsMap("process");
 
         // allocate the runtime unique identifier
         UUID uniqueId = UUID.randomUUID();
@@ -57,7 +57,7 @@ public final class UserCodeProcessService extends UserCodeServiceBase {
 
         String command0 = (processPath  == null ? "" : processPath + File.separator) + processName;
 
-        InfoList argsInfo = processInfo.childAsList("args", false);
+        JobBuilderInfoList argsInfo = processInfo.childAsList("args", false);
         int argsSize = 1 + (argsInfo == null ? 0 : argsInfo.size());
         String[] command = new String[argsSize];
 

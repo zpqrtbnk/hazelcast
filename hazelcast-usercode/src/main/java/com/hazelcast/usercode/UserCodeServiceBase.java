@@ -2,7 +2,7 @@ package com.hazelcast.usercode;
 
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.serialization.SerializationServiceAware;
-import com.hazelcast.jet.jobbuilder.InfoMap;
+import com.hazelcast.jet.jobbuilder.JobBuilderInfoMap;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.usercode.transports.grpc.GrpcTransport;
 import com.hazelcast.usercode.transports.sharedmemory.SharedMemoryTransport;
@@ -41,13 +41,13 @@ public abstract class UserCodeServiceBase implements UserCodeService, Serializat
 
         // create the transport
         String transportName;
-        InfoMap transportInfo;
+        JobBuilderInfoMap transportInfo;
         if (runtimeInfo.childIsString("transport")) {
             transportName = runtimeInfo.childAsString("transport");
-            transportInfo = new InfoMap();
+            transportInfo = new JobBuilderInfoMap();
         }
         else {
-            InfoMap info = runtimeInfo.childAsMap("transport");
+            JobBuilderInfoMap info = runtimeInfo.childAsMap("transport");
             transportName = info.uniqueChildName();
             transportInfo = info.childAsMap(transportName);
         }
