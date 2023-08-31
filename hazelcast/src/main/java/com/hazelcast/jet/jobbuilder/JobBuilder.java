@@ -35,6 +35,7 @@ public final class JobBuilder {
     private static final Map<String, Function4<Pipeline, String, JobBuilderInfoMap, ILogger, Object>> sources = new HashMap<>();
     private static final Map<String, Consumer4<Object, String, JobBuilderInfoMap, ILogger>> sinks = new HashMap<>();
     private static final Map<String, Function4<Object, String, JobBuilderInfoMap, ILogger, Object>> transforms = new HashMap<>();
+    private static final Object mutex = new Object();
 
     private static final URL dummyUrl = getDummyURL(); // a valid, dummy URL
 
@@ -47,7 +48,6 @@ public final class JobBuilder {
         }
     }
 
-    private final Object mutex = new Object();
     private final ILogger logger;
     private boolean initialized;
     private Pipeline pipeline;

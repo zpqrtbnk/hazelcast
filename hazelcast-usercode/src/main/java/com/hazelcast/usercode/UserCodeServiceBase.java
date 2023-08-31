@@ -72,7 +72,7 @@ public abstract class UserCodeServiceBase implements UserCodeService, Serializat
                 transport = new SharedMemoryTransport(transportInfo, logging);
                 break;
             default:
-                throw new UserCodeException("Unsupported transport mode '" + transportName + "'.");
+                throw new UserCodeException("Unsupported transport '" + transportName + "'.");
         }
         return transport;
     }
