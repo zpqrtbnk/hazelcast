@@ -34,8 +34,6 @@ public class JetMessageTaskFactoryProvider implements MessageTaskFactoryProvider
     }
 
     public void initFactories() {
-        factories.put(JetSubmitYamlJobCodec.REQUEST_MESSAGE_TYPE,
-                (cm, con) -> new JetSubmitYamlJobMessageTask(cm, node, con));
         factories.put(JetSubmitJobCodec.REQUEST_MESSAGE_TYPE,
                 (cm, con) -> new JetSubmitJobMessageTask(cm, node, con));
         factories.put(JetTerminateJobCodec.REQUEST_MESSAGE_TYPE,

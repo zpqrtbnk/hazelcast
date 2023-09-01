@@ -16,7 +16,6 @@
 
 package com.hazelcast.usercode;
 
-import com.hazelcast.internal.util.OsHelper;
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.config.ResourceType;
 import com.hazelcast.jet.core.ProcessorSupplier;

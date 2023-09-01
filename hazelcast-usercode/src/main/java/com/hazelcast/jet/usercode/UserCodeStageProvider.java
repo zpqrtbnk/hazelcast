@@ -18,10 +18,10 @@ package com.hazelcast.jet.usercode;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.jobbuilder.*;
 import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.StreamStage;
-import com.hazelcast.jet.jobbuilder.*;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.usercode.*;

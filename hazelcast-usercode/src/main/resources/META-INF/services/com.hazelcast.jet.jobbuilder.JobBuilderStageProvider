@@ -1,1 +1,2 @@
+com.hazelcast.jet.usercode.UserCodeStageProvider
 com.hazelcast.usercode.experiments.StageProvider

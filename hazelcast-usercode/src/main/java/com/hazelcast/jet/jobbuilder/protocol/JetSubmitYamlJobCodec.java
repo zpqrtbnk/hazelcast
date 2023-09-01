@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package com.hazelcast.client.impl.protocol.codec;
+package com.hazelcast.jet.jobbuilder.protocol;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.builtin.StringCodec;
 
 import javax.annotation.Nullable;
-
 import java.util.UUID;
 
 import static com.hazelcast.client.impl.protocol.ClientMessage.*;
@@ -60,7 +59,7 @@ public final class JetSubmitYamlJobCodec {
         clientMessage.setContainsSerializedDataInRequest(true);
         clientMessage.setRetryable(false);
         clientMessage.setOperationName("Jet.SubmitYamlJob");
-        ClientMessage.Frame initialFrame = new ClientMessage.Frame(new byte[REQUEST_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);
+        Frame initialFrame = new Frame(new byte[REQUEST_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);
         encodeInt(initialFrame.content, TYPE_FIELD_OFFSET, REQUEST_MESSAGE_TYPE);
         encodeInt(initialFrame.content, PARTITION_ID_FIELD_OFFSET, -1);
         encodeLong(initialFrame.content, REQUEST_JOB_ID_FIELD_OFFSET, jobId);
@@ -73,9 +72,9 @@ public final class JetSubmitYamlJobCodec {
 
     public static RequestParameters decodeRequest(ClientMessage clientMessage) {
 
-        ClientMessage.ForwardFrameIterator iterator = clientMessage.frameIterator();
+        ForwardFrameIterator iterator = clientMessage.frameIterator();
         RequestParameters request = new RequestParameters();
-        ClientMessage.Frame initialFrame = iterator.next();
+        Frame initialFrame = iterator.next();
         request.jobId = decodeLong(initialFrame.content, REQUEST_JOB_ID_FIELD_OFFSET);
         request.dryRun = decodeBoolean(initialFrame.content, REQUEST_DRYRUN_FIELD_OFFSET);
         request.jobDefinition = StringCodec.decode(iterator);
@@ -91,7 +90,7 @@ public final class JetSubmitYamlJobCodec {
     public static ClientMessage encodeResponse() {
 
         ClientMessage clientMessage = ClientMessage.createForEncode();
-        ClientMessage.Frame initialFrame = new ClientMessage.Frame(new byte[RESPONSE_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);
+        Frame initialFrame = new Frame(new byte[RESPONSE_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);
         encodeInt(initialFrame.content, TYPE_FIELD_OFFSET, RESPONSE_MESSAGE_TYPE);
         clientMessage.add(initialFrame);
         return clientMessage;
