@@ -113,6 +113,21 @@ public class ExpressionEngineTests {
         System.out.println(ee.eval("x,y->x+y", 2,3));
     }
 
+    @Test
+    public void Test8() {
+        ExpressionEngine ee = new MvelExpressionEngine();
+
+        // integer value 2 ?!
+        Object result = ee.eval("x,y->(x,y)", 2,"meh");
+        System.out.println(result.getClass());
+        System.out.println(result);
+
+        // java.util.ArrayList w/ two values
+        result = ee.eval("x,y->[x,y]", 2,"meh");
+        System.out.println(result.getClass());
+        System.out.println(result);
+    }
+
     public MapEntry NewMapEntry(Object key, Object value) {
         return new MapEntry(key, value);
     }
