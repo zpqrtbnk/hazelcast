@@ -19,6 +19,7 @@ package com.hazelcast.usercode.experiments;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.jobbuilder.*;
 import com.hazelcast.jet.pipeline.GeneralStage;
+import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.usercode.compile.InMemoryFileManager;
 import com.hazelcast.usercode.compile.JavaSourceFromString;
@@ -30,7 +31,7 @@ import javax.tools.ToolProvider;
 import java.util.Collections;
 import java.util.UUID;
 
-public class ExpBuilderStageProvider implements JobBuilderStageProvider {
+public class StageProvider implements JobBuilderStageProvider {
 
     @Override
     public SourceStage[] getSources() {
@@ -40,13 +41,41 @@ public class ExpBuilderStageProvider implements JobBuilderStageProvider {
     @Override
     public TransformStage[] getTransforms() {
         return new TransformStage[] {
-                new TransformStage("lambda", ExpBuilderStageProvider::lambda)
+                new TransformStage("lambda", StageProvider::lambda),
+                new TransformStage("join-map", StageProvider::mapUsingMap)
         };
     }
 
     @Override
     public SinkStage[] getSinks() {
         return new SinkStage[0];
+    }
+
+    // highly experimental
+    private static Object mapUsingMap(Object stageContext, String name, JobBuilderInfoMap definition, ILogger logger) throws JobBuilderException {
+
+        String mapName = definition.childAsString("map-name");
+        String keyExpression = definition.childAsString("key");
+        String mapExpression = definition.childAsString("map");
+
+        StreamStage stage = (StreamStage) stageContext;
+
+        // FIXME
+        //   the engine should be cached / singleton
+        //   the expressions should be compiled
+        ExpressionEngine exprEngine = new MvelExpressionEngine();
+
+        return stage.mapUsingIMap(mapName,
+                x -> exprEngine.eval(keyExpression, x),
+                (x, y) -> exprEngine.eval(mapExpression, x, y));
+    }
+
+    // higly experimental
+    private static Object expr(Object stageContext, String name, JobBuilderInfoMap definition, ILogger logger) throws JobBuilderException {
+
+        String expression = definition.childAsString("expr");
+        ExpressionEngine engine = new MvelExpressionEngine();
+        return ((GeneralStage) stageContext).map(x -> engine.eval(expression, x));
     }
 
     // highly experimental and won't work on viridian of course

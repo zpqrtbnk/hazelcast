@@ -28,9 +28,7 @@ import java.util.concurrent.CompletableFuture;
 // a UserCodeService that talks to the UserCodeController API and executes each runtime in a separate container
 public final class UserCodeContainerService extends UserCodeServiceBase {
 
-    // TODO: implement this, Emre is currently working on it
-    // TODO: implement logging when container starts and stops etc
-
+    private final int DEFAULT_GRPC_PORT = 5252;
     private final ILogger logger;
     private final UserCodeRuntimeController controller;
 
@@ -59,24 +57,29 @@ public final class UserCodeContainerService extends UserCodeServiceBase {
                 .createContainer(image)
                 .thenApply(containerAddress -> {
 
-					// FIXME cleanup this, conditions are flaky
                     if (startInfo.childIsMap("transport")) {
+                        // yaml contains a 'transport:' map which may specify an address and a port
+                        // we're going to force-replace the address with the container address
+                        // as for the port, we're adding it if it is not set already
                         JobBuilderInfoMap transportInfo = startInfo.childAsMap("transport");
 						JobBuilderInfoMap grpcInfo = transportInfo.childAsMap("grpc", false);
 						if (grpcInfo == null) {
 							throw new UserCodeException("Invalid transport, must be 'grpc'.");
 						}
-						// FIXME overwriting what's in yaml?! why?! should test hasChild first!
                         grpcInfo.setChild("address", containerAddress);
-                        grpcInfo.setChild("port", 5252); // FIXME or whatever the default gRPC port is
+                        if (!grpcInfo.hasChild("port")) {
+                            grpcInfo.setChild("port", DEFAULT_GRPC_PORT);
+                        }
                     }
                     else {
+                        // yaml contains a single 'transport: grpc' entry
+                        // we're going to convert it into a map, to specify the address and port
                         if (startInfo.childIsString("transport") && !startInfo.childAsString("transport").equals("grpc")) {
                             throw new UserCodeException("Invalid transport, must be 'grpc'.");
                         }
 						JobBuilderInfoMap grpcInfo = new JobBuilderInfoMap();
                         grpcInfo.setChild("address", containerAddress);
-                        grpcInfo.setChild("port", 5252); // FIXME or whatever the default gRPC port is
+                        grpcInfo.setChild("port", DEFAULT_GRPC_PORT);
                         JobBuilderInfoMap transportInfo = new JobBuilderInfoMap();
 						transportInfo.setChild("grpc", grpcInfo);
                         startInfo.setChild("transport", transportInfo);
