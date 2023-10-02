@@ -26,14 +26,14 @@ findScriptDir
 
 if [ -z "$LOGGING_CONFIG" ]; then
   # Use the default log4j2 file
-  LOGGING_CONFIG="file:$HAZELCAST_HOME/config/log4j2.properties"
+  LOGGING_CONFIG="$HAZELCAST_HOME/config/log4j2.properties"
 else
   if [ -f "$LOGGING_CONFIG" ]; then
     # Try if the file exists - either absolute or relative path
-    LOGGING_CONFIG="file:$LOGGING_CONFIG"
+    LOGGING_CONFIG="$LOGGING_CONFIG"
   elif [ -f "$HAZELCAST_HOME/config/$LOGGING_CONFIG" ]; then
     # Try file in the config directory
-    LOGGING_CONFIG="file:$HAZELCAST_HOME/config/$LOGGING_CONFIG"
+    LOGGING_CONFIG="$HAZELCAST_HOME/config/$LOGGING_CONFIG"
   else
     echo "Could not find specified LOGGING_CONFIG file."
     exit 1
@@ -65,6 +65,15 @@ if [ "${HAZELCAST_CONFIG:0:1}" != "/" ]; then
   HAZELCAST_CONFIG="$HAZELCAST_HOME/$HAZELCAST_CONFIG"
 fi
 
+JET_CUSTOM_LIB_DIR="$HAZELCAST_HOME/custom-lib"
+
+# ensure windows style on Windows
+if [ -n "${CYGPATH}" ]; then
+  HAZELCAST_CONFIG=$(cygpath -w -p "$HAZELCAST_CONFIG")
+  JET_CUSTOM_LIB_DIR=$(cygpath -w -p "$JET_CUSTOM_LIB_DIR")
+  LOGGING_CONFIG=$(cygpath -w -p "$LOGGING_CONFIG")
+fi
+
 if [ "${PROMETHEUS_PORT}" ]; then
     echo "Prometheus enabled on port ${PROMETHEUS_PORT}"
     PROMETHEUS="-javaagent:${HAZELCAST_HOME}/lib/jmx_prometheus_javaagent-${prometheus.version}.jar=${PROMETHEUS_PORT}:${HAZELCAST_HOME}/config/jmx_agent_config.yaml"
@@ -80,9 +89,9 @@ fi
 JAVA_OPTS_ARRAY=(\
 $JDK_OPTS \
 "-Dhazelcast.logging.type=log4j2" \
-"-Dlog4j.configurationFile=$LOGGING_CONFIG" \
+"-Dlog4j2.configurationFile=$LOGGING_CONFIG" \
 "-Dhazelcast.config=$HAZELCAST_CONFIG" \
-"-Djet.custom.lib.dir=$HAZELCAST_HOME/custom-lib" \
+"-Djet.custom.lib.dir=$JET_CUSTOM_LIB_DIR" \
 $PROMETHEUS \
 $LICENSING_OPT\
 $JVM_OPTIONS \
