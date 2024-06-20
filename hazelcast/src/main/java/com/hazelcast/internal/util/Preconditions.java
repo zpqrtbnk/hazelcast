@@ -30,6 +30,9 @@ import static java.lang.String.format;
  */
 public final class Preconditions {
 
+    private static final int MIN_PORT = 0;
+    private static final int MAX_PORT = 65535;
+
     private Preconditions() {
     }
 
@@ -313,6 +316,23 @@ public final class Preconditions {
         if (!expression) {
             throw new IllegalArgumentException(errorMessage);
         }
+    }
+
+    /**
+     * Tests whether given port number is valid or not.
+     * @param port the port number to be checked.
+     * @return given valid port number.
+     * @throws java.lang.IllegalArgumentException if the given port is not valid.
+     */
+    public static int checkPortValid(int port) {
+        if (port < MIN_PORT) {
+            throw new IllegalArgumentException("The port number cannot be negative.");
+        }
+
+        if (port > MAX_PORT) {
+            throw new IllegalArgumentException("The port number cannot be bigger than 65535.");
+        }
+        return port;
     }
 
     /**

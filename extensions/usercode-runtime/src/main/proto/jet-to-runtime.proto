@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.hazelcast.jet.usercoderuntime.impl.runtime";
+option java_outer_classname = "JetToUserCodeRuntimeService";
+
+package controller;
+
+service JetToUserCodeRuntime {
+  rpc invokeBatch(stream InputListOfMessage) returns (stream OutputListOfMessage) {}
+  rpc invoke(stream InputMessage) returns (stream OutputMessage) {}
+}
+
+message InputListOfMessage {
+  repeated bytes payLoad= 1;
+}
+
+message OutputListOfMessage {
+  repeated bytes payLoad= 1;
+}
+
+message InputMessage {
+  bytes payLoad= 1;
+}
+
+message OutputMessage {
+  bytes payLoad= 1;
+}

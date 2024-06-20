@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.hazelcast.jet.usercoderuntime.impl.controller";
+option java_outer_classname = "JetToRuntimeControllerService";
+
+package controller;
+
+service Controller {
+  rpc Create (CreateRequest) returns (CreateResponse) {}
+  rpc Delete (DeleteRequest) returns (Empty) {}
+}
+
+message CreateRequest {
+  string image = 1;
+}
+
+message CreateResponse {
+  string name = 1;
+}
+
+message DeleteRequest {
+  string name = 1;
+}
+
+message Empty {}

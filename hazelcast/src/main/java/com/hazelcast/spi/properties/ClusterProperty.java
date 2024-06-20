@@ -1839,6 +1839,32 @@ public final class ClusterProperty {
     public static final HazelcastProperty PROCESSOR_CUSTOM_LIB_DIR
             = new HazelcastProperty("hazelcast.jet.custom.lib.dir", "custom-lib");
 
+    /* Jet User Code Properties*/
+
+    /**
+     * Keep alive duration for GRPC connection from Jet to User Code Runtime Controller.
+     */
+    public static final HazelcastProperty USERCODERUNTIME_CONTROLLER_KEEP_ALIVE_SECONDS
+            = new HazelcastProperty("hazelcast.jet.usercoderuntime.controller.keep.alive.seconds", 1800, SECONDS);
+
+    /**
+     * Timeout for keep alive ping for GRPC connection from Jet to User Code Runtime Controller.
+     */
+    public static final HazelcastProperty USERCODERUNTIME_CONTROLLER_KEEP_ALIVE_TIMEOUT_SECONDS
+            = new HazelcastProperty("hazelcast.jet.usercoderuntime.controller.keep.alive.timeout.seconds", 20, SECONDS);
+
+    /**
+     * Timeout for keep alive ping for GRPC connection from a Jet stage to User Code Runtime.
+     */
+    public static final HazelcastProperty USERCODERUNTIME_RUNTIME_KEEP_ALIVE_SECONDS
+            = new HazelcastProperty("hazelcast.jet.usercoderuntime.runtime.keep.alive.seconds", 1800, SECONDS);
+
+    /**
+     * Timeout for keep alive ping for GRPC connection from Jet to User Code Runtime.
+     */
+    public static final HazelcastProperty USERCODERUNTIME_RUNTIME_KEEP_ALIVE_TIMEOUT_SECONDS
+            = new HazelcastProperty("hazelcast.jet.usercoderuntime.runtime.keep.alive.timeout.seconds", 20, SECONDS);
+
     /**
      * Controls whether cluster emojis can be used in log messages. This is just a hint for components calling the logging.
      *
